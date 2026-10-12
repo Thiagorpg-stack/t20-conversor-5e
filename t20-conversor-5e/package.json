@@ -1,0 +1,11 @@
+{
+  "name": "t20-conversor-5e",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "5e para T20: módulo do Foundry VTT que converte criaturas de D&D 5e em ameaças de Tormenta20",
+  "scripts": {
+    "test": "node --test"
+  },
+  "license": "MIT"
+}

@@ -1,0 +1,58 @@
+/* A janela cresce com o conteúdo, mas nunca passa da tela: quem rola é o corpo do diálogo. */
+.t20-conversor-5e { max-height: calc(100vh - 1rem); }
+.t20-conversor-5e .window-content { display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
+.t20-conversor-5e .conversor { display: flex; flex-direction: column; gap: 0.75rem; padding: 0.5rem; flex: 1 1 auto; min-height: 0; overflow-y: auto; }
+
+.t20-conversor-5e fieldset { display: flex; flex-direction: column; gap: 0.5rem; margin: 0; padding: 0.5rem 0.75rem; border: 1px solid #8886; border-radius: 4px; }
+.t20-conversor-5e legend { padding: 0 0.4rem; font-weight: bold; }
+
+/* O sistema estica todo campo a 100%: aqui cada campo tem a largura do conteúdo e o rótulo fica em cima. */
+.t20-conversor-5e fieldset > label,
+.t20-conversor-5e .conversor__linha label { display: flex; flex-direction: column; gap: 0.15rem; font-size: 0.85em; }
+.t20-conversor-5e .conversor input:not([type=checkbox]),
+.t20-conversor-5e .conversor select,
+.t20-conversor-5e .conversor textarea { width: auto; min-width: 0; box-sizing: border-box; }
+.t20-conversor-5e fieldset > label textarea { width: 100%; resize: vertical; }
+
+.t20-conversor-5e .conversor__linha { display: flex; flex-wrap: wrap; gap: 0.5rem 0.75rem; align-items: flex-end; }
+.t20-conversor-5e .conversor__largo { flex: 1 1 12rem; }
+.t20-conversor-5e .conversor__largo input,
+.t20-conversor-5e .conversor__largo select { width: 100%; }
+.t20-conversor-5e .conversor__atributos label { width: 4.5rem; }
+.t20-conversor-5e .conversor__atributos input { width: 100%; text-align: center; }
+
+.t20-conversor-5e .conversor__importar { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; }
+.t20-conversor-5e .conversor__importar button { width: auto; flex: 0 0 auto; }
+.t20-conversor-5e .conversor__importacao ul { margin: 0; padding-left: 1rem; font-size: 0.9em; }
+.t20-conversor-5e .conversor__rel--ok strong { color: #2e7d32; }
+.t20-conversor-5e .conversor__rel--revisar strong { color: #b8860b; }
+.t20-conversor-5e .conversor__rel--ignorado strong { color: #777; }
+.t20-conversor-5e .conversor__campo { display: flex; flex-direction: column; gap: 0.15rem; flex: 1 1 14rem; font-size: 0.85em; }
+.t20-conversor-5e .conversor__arquivo { display: flex; gap: 0.25rem; }
+.t20-conversor-5e .conversor__arquivo input { flex: 1 1 auto; }
+.t20-conversor-5e .conversor__arquivo button { flex: 0 0 auto; width: auto; }
+
+.t20-conversor-5e .conversor__ataque { flex-wrap: nowrap; align-items: center; }
+.t20-conversor-5e .conversor__ataque input[data-campo=nome] { flex: 1 1 10rem; }
+.t20-conversor-5e .conversor__ataque select { flex: 0 0 auto; }
+.t20-conversor-5e .conversor__ataque input[data-campo=qtd] { flex: 0 0 4rem; width: 4rem; text-align: center; }
+.t20-conversor-5e .conversor__ataque button { flex: 0 0 auto; width: auto; }
+
+.t20-conversor-5e .conversor__poder { display: flex; flex-direction: column; gap: 0.25rem; padding-bottom: 0.5rem; border-bottom: 1px solid #8884; }
+.t20-conversor-5e .conversor__poder .conversor__linha { flex-wrap: nowrap; align-items: center; }
+.t20-conversor-5e .conversor__poder input { flex: 1 1 auto; }
+.t20-conversor-5e .conversor__poder button { flex: 0 0 auto; width: auto; }
+.t20-conversor-5e .conversor__poder textarea { width: 100%; resize: vertical; }
+
+.t20-conversor-5e .conversor__marca { flex-direction: row !important; align-items: center; gap: 0.4rem !important; font-size: 1em !important; }
+.t20-conversor-5e .conversor__nota { margin: 0; font-size: 0.9em; }
+.t20-conversor-5e .conversor__erros { border-left: 3px solid #c62828; padding: 0.25rem 0.5rem; color: #c62828; font-weight: bold; }
+.t20-conversor-5e .conversor__avisos { margin-top: 0.4rem; padding-left: 0.5rem; border-left: 3px solid #b8860b; font-size: 0.9em; }
+.t20-conversor-5e .conversor__previa table { width: 100%; border-collapse: collapse; }
+.t20-conversor-5e .conversor__previa th,
+.t20-conversor-5e .conversor__previa td { padding: 0.2rem 0.5rem; text-align: left; border-bottom: 1px solid #8884; }
+.t20-conversor-5e .conversor__previa th { width: 60%; font-weight: normal; }
+.t20-conversor-5e .conversor__rodape { display: flex; justify-content: flex-end; gap: 0.5rem; }
+.t20-conversor-5e .conversor__rodape button { width: auto; }
+
+.t20c5e-botao { flex: 0 0 auto; }

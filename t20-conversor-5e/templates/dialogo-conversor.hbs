@@ -1,0 +1,171 @@
+<section class="conversor">
+  <div class="conversor__importar">
+    <button type="button" data-action="importar5e"><i class="fas fa-file-arrow-up"></i> {{localize "T20C5E.Importar"}}</button>
+    <input type="file" accept=".json,application/json" data-importar hidden>
+    <span class="conversor__nota">{{localize "T20C5E.ImportarDica"}}</span>
+  </div>
+  {{#if importacao.length}}
+  <fieldset class="conversor__importacao">
+    <legend>{{localize "T20C5E.SecaoImportacao"}}</legend>
+    <ul>{{#each importacao}}<li class="conversor__rel conversor__rel--{{tipo}}"><strong>{{rotulo}}</strong> {{texto}}</li>{{/each}}</ul>
+  </fieldset>
+  {{/if}}
+  <fieldset>
+    <legend>{{localize "T20C5E.SecaoCriatura"}}</legend>
+    <div class="conversor__linha">
+      <label class="conversor__largo">{{localize "T20C5E.Nome"}}
+        <input type="text" name="nome" value="{{e.nome}}" placeholder="{{localize 'T20C5E.NomeDica'}}">
+      </label>
+      <label>{{localize "T20C5E.CR"}}
+        <input type="text" name="cr" value="{{e.cr}}" size="5" title="{{localize 'T20C5E.CRDica'}}">
+      </label>
+      <label>{{localize "T20C5E.Papel"}}
+        <select name="papel">{{#each papeis}}<option value="{{valor}}" {{#if selecionado}}selected{{/if}}>{{rotulo}}</option>{{/each}}</select>
+      </label>
+    </div>
+    <label>{{localize "T20C5E.Conceito"}}
+      <textarea name="conceito" rows="2">{{e.conceito}}</textarea>
+    </label>
+    <div class="conversor__linha">
+      <div class="conversor__campo">
+        <span>{{localize "T20C5E.Retrato"}}</span>
+        <div class="conversor__arquivo">
+          <input type="text" name="img" value="{{e.img}}" placeholder="{{localize 'T20C5E.ImagemDica'}}">
+          <button type="button" data-action="escolherImagem" data-campo="img" title="{{localize 'T20C5E.Escolher'}}"><i class="fas fa-folder-open"></i></button>
+          <button type="button" data-action="enviarImagem" data-campo="img" title="{{localize 'T20C5E.Enviar'}}"><i class="fas fa-upload"></i></button>
+          <button type="button" data-action="baixarImagem" data-campo="img" title="{{localize 'T20C5E.Baixar'}}"><i class="fas fa-cloud-arrow-down"></i></button>
+          <input type="file" accept="image/*" data-enviar="img" hidden>
+        </div>
+      </div>
+      <div class="conversor__campo">
+        <span>{{localize "T20C5E.Token"}}</span>
+        <div class="conversor__arquivo">
+          <input type="text" name="token" value="{{e.token}}" placeholder="{{localize 'T20C5E.TokenDica'}}">
+          <button type="button" data-action="escolherImagem" data-campo="token" title="{{localize 'T20C5E.Escolher'}}"><i class="fas fa-folder-open"></i></button>
+          <button type="button" data-action="enviarImagem" data-campo="token" title="{{localize 'T20C5E.Enviar'}}"><i class="fas fa-upload"></i></button>
+          <button type="button" data-action="baixarImagem" data-campo="token" title="{{localize 'T20C5E.Baixar'}}"><i class="fas fa-cloud-arrow-down"></i></button>
+          <input type="file" accept="image/*" data-enviar="token" hidden>
+        </div>
+      </div>
+    </div>
+    <div class="conversor__linha">
+      <label>{{localize "T20C5E.Tamanho"}}
+        <select name="tamanho">{{#each tamanhos}}<option value="{{valor}}" {{#if selecionado}}selected{{/if}}>{{rotulo}}</option>{{/each}}</select>
+      </label>
+      <label>{{localize "T20C5E.Tipo"}}
+        <select name="tipo">{{#each tipos}}<option value="{{valor}}" {{#if selecionado}}selected{{/if}}>{{rotulo}}</option>{{/each}}</select>
+      </label>
+      <label>{{localize "T20C5E.Deslocamento"}}
+        <input type="number" name="deslocamento" value="{{e.deslocamento}}" min="0" step="1.5">
+      </label>
+    </div>
+    <div class="conversor__linha conversor__atributos">
+      {{#each atributos}}
+      <label>{{rotulo}}
+        <input type="number" name="atributo-{{chave}}" value="{{valor}}" min="-10" max="30">
+      </label>
+      {{/each}}
+    </div>
+  </fieldset>
+
+  <fieldset>
+    <legend>{{localize "T20C5E.SecaoRitmo"}}</legend>
+    <div class="conversor__linha">
+      <label>{{localize "T20C5E.NivelGrupo"}}
+        <input type="number" name="nivelGrupo" value="{{e.nivelGrupo}}" min="0" max="20" placeholder="—" title="{{localize 'T20C5E.NivelGrupoDica'}}">
+      </label>
+      <label class="conversor__largo">{{localize "T20C5E.Ritmo"}}
+        <select name="ritmo">{{#each ritmos}}<option value="{{valor}}" {{#if selecionado}}selected{{/if}}>{{rotulo}}</option>{{/each}}</select>
+      </label>
+      <label>{{localize "T20C5E.NDFinal"}}
+        <select name="nd">{{#each nds}}<option value="{{valor}}" {{#if selecionado}}selected{{/if}}>{{valor}}</option>{{/each}}</select>
+      </label>
+    </div>
+    {{#if referencia}}
+    <p class="conversor__nota">
+      {{localize "T20C5E.NDReferencia"}}: <strong>{{referencia}}</strong>
+      · {{localize "T20C5E.NDCalibrado"}}: <strong>{{calibrado}}</strong>
+      {{#unless usouFormula}}({{localize "T20C5E.SemFormula"}}){{/unless}}
+      {{#if ndManual}}· <em>{{localize "T20C5E.NDManual"}}</em>{{/if}}
+    </p>
+    {{/if}}
+    <label class="conversor__marca">
+      <input type="checkbox" name="chefeFinal" {{#if e.chefeFinal}}checked{{/if}}>
+      {{localize "T20C5E.ChefeFinal"}}
+    </label>
+    <div class="conversor__linha">
+      <span>{{localize "T20C5E.Resistencias"}}:</span>
+      {{#each ordem}}
+      <label>{{rotulo}}
+        <select name="ordem-{{indice}}">{{#each opcoes}}<option value="{{valor}}" {{#if selecionado}}selected{{/if}}>{{nome}}</option>{{/each}}</select>
+      </label>
+      {{/each}}
+    </div>
+  </fieldset>
+
+  <fieldset>
+    <legend>{{localize "T20C5E.SecaoAtaques"}}</legend>
+    <div class="conversor__linha">
+      <label class="conversor__largo">{{localize "T20C5E.AtaquesPorRodada"}}
+        <select name="modoAtaques">{{#each modosAtaques}}<option value="{{valor}}" {{#if selecionado}}selected{{/if}}>{{rotulo}}</option>{{/each}}</select>
+      </label>
+      {{#if limiteAtaques}}
+      <span class="conversor__nota">{{localize "T20C5E.TotalAtaques"}}: <strong>{{totalAtaques}}</strong> · {{localize "T20C5E.LimiteND"}}: <strong>{{limiteAtaques}}</strong></span>
+      {{/if}}
+    </div>
+    {{#each ataques}}
+    <div class="conversor__linha conversor__ataque" data-ataque="{{indice}}">
+      <input type="text" data-campo="nome" value="{{nome}}" placeholder="{{localize 'T20C5E.AtaqueNome'}}">
+      <select data-campo="tipo">{{#each tipos}}<option value="{{valor}}" {{#if selecionado}}selected{{/if}}>{{rotulo}}</option>{{/each}}</select>
+      <select data-campo="dano">{{#each danos}}<option value="{{valor}}" {{#if selecionado}}selected{{/if}}>{{rotulo}}</option>{{/each}}</select>
+      <input type="number" data-campo="qtd" value="{{qtd}}" min="1" title="{{localize 'T20C5E.AtaqueQtd'}}">
+      <button type="button" data-action="removerAtaque" data-indice="{{indice}}" title="{{localize 'T20C5E.Remover'}}"><i class="fas fa-trash"></i></button>
+    </div>
+    {{/each}}
+    <button type="button" data-action="addAtaque"><i class="fas fa-plus"></i> {{localize "T20C5E.AddAtaque"}}</button>
+  </fieldset>
+
+  <fieldset class="conversor__poderes">
+    <legend>{{localize "T20C5E.SecaoPoderes"}}</legend>
+    <p class="conversor__nota">{{localize "T20C5E.PoderesDica"}}</p>
+    {{#each poderes}}
+    <div class="conversor__poder" data-poder="{{indice}}">
+      <div class="conversor__linha">
+        <input type="text" data-campo-poder="nome" value="{{nome}}" placeholder="{{localize 'T20C5E.PoderNome'}}">
+        <button type="button" data-action="removerPoder" data-indice="{{indice}}" title="{{localize 'T20C5E.Remover'}}"><i class="fas fa-trash"></i></button>
+      </div>
+      <textarea data-campo-poder="texto" rows="3">{{texto}}</textarea>
+    </div>
+    {{else}}
+    <p class="conversor__nota">{{localize "T20C5E.SemPoderes"}}</p>
+    {{/each}}
+    <button type="button" data-action="addPoder"><i class="fas fa-plus"></i> {{localize "T20C5E.AddPoder"}}</button>
+  </fieldset>
+
+  {{#if erros.length}}
+  <div class="conversor__erros"><ul>{{#each erros}}<li>{{this}}</li>{{/each}}</ul></div>
+  {{/if}}
+
+  {{#if previa}}
+  <fieldset class="conversor__previa">
+    <legend>{{localize "T20C5E.SecaoPrevia"}}</legend>
+    <table>
+      <tbody>
+        {{#each previa.linhas}}<tr><th>{{rotulo}}</th><td>{{valor}}</td></tr>{{/each}}
+      </tbody>
+    </table>
+    {{#if previa.armas.length}}
+    <p><strong>{{localize "T20C5E.DanoPorGolpe"}}</strong> ({{localize "T20C5E.AlvoRodada"}}: {{previa.danoAlvo}})</p>
+    <ul>{{#each previa.armas}}<li>{{nome}} × {{qtd}}: <code>{{formula}}</code></li>{{/each}}</ul>
+    {{/if}}
+    {{#if previa.avisos.length}}<div class="conversor__avisos"><strong>{{localize "T20C5E.Avisos"}}</strong><ul>{{#each previa.avisos}}<li>{{this}}</li>{{/each}}</ul></div>{{/if}}
+    {{#if previa.patamar.length}}<div class="conversor__avisos"><strong>{{localize "T20C5E.Patamar"}}</strong><ul>{{#each previa.patamar}}<li>{{this}}</li>{{/each}}</ul></div>{{/if}}
+    {{#if previa.revisar.length}}<div class="conversor__avisos"><strong>{{localize "T20C5E.Revisar"}}</strong><ul>{{#each previa.revisar}}<li>{{this}}</li>{{/each}}</ul></div>{{/if}}
+  </fieldset>
+  {{/if}}
+
+  <footer class="conversor__rodape">
+    <button type="button" data-action="cancelar">{{localize "T20C5E.Cancelar"}}</button>
+    <button type="button" data-action="criar" {{#unless previa}}disabled{{/unless}}><i class="fas fa-dragon"></i> {{localize "T20C5E.Criar"}}</button>
+  </footer>
+</section>
