@@ -137,26 +137,26 @@ export function criarActorTemplate() {
 
 // Poder no formato das fichas oficiais. Sem `dano` ele só tem texto e o mestre liga as rolagens à mão; com `dano`
 // ([{ formula, tipo }]) leva uma rolagem de dano real, e `resistenciaTxt` ("Reflexos Metade") vai no teste de resistência.
-export function criarItemPoder({ nome, descricao = '', execucao = '', dano = [], resistenciaTxt = '' }) {
+export function criarItemPoder({ nome, descricao = '', execucao = '', dano = [], resistenciaTxt = '', img = 'icons/svg/aura.svg', tipo = 'ability', effects = [], area = '' }) {
   return {
     name: nome,
     type: 'poder',
-    img: 'icons/svg/aura.svg',
+    img,
     system: {
       description: { value: descricao, unidentified: '' },
       source: '',
       ativacao: { execucao, custo: 0, qtd: '', condicao: '', special: '' },
       duracao: { value: 0, units: 'inst', special: '' },
       range: { value: null, units: '' },
-      efeito: '', alcance: 'none', area: '',
+      efeito: '', alcance: 'none', area,
       resistencia: { pericia: '', atributo: '', bonus: 0, txt: resistenciaTxt },
       rolls: dano.length
         ? [{ name: 'Dano', key: 'dano0', type: 'dano', parts: dano.map((d) => [d.formula, d.tipo, '']), versatil: '', adaptavel: '' }]
         : [],
-      tipo: 'ability', subtipo: '',
+      tipo, subtipo: '',
       origin: '', tags: [], chatFlavor: '', chatGif: '', rolltags: [], automationtags: [],
     },
-    effects: [], folder: null, sort: 0, flags: {}, ownership: { default: 0 },
+    effects, folder: null, sort: 0, flags: {}, ownership: { default: 0 },
   };
 }
 

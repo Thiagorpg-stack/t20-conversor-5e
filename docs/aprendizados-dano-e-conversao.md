@@ -195,8 +195,15 @@ As descrições trazem enriquecedores e HTML. Regras usadas: tirar HTML (parágr
   de região também vira a CD da tabela.
 - **Conjurador**: PM = 5 × ND (valor sugerido pelo mestre; o Chefe Final soma `2 × ND` por cima). O atributo de conjuração vem de
   `system.attributes.spellcasting` (`cha` → `car`, `wis` → `sab`).
-- **Contador de uso**: o T20 consome recursos da ficha por `system.consume = { type: 'attribute', target: 'primary', amount: 1 }`
-  (o alvo é a chave em `system.resources`: `primary`, `secondary`, `tertiary`).
+- **Contador de uso**: `system.resources.primary|secondary|tertiary` = `{ value, max, label }`. O **poder** não tem `system.consume`
+  (o esquema do tipo `poder` o remove em `schemaActivation`); só a arma tem. Então o contador é manual.
+
+- **Poderes oficiais** (`Compendium.tormenta20.habilidades-de-criaturas`): "Magias" (`tipo: 'racial'`, passivo, texto vazio),
+  "Resistência a Magia" (`tipo: 'ability'`, passivo, efeito desativado `roll +N` em `Fortitude;Reflexos;Vontade`), "Sopro"
+  (`area: 'cubo 3m de lado'`, `resistencia.txt: 'Reflexos Metade'`, dano `perda`, texto "Recarga (movimento)", efeito de condição anexado),
+  "Aura Aterradora" (`alcance: 'long'`, `resistencia.txt: 'Vontade evita'`, efeitos Abalado/Apavorado) e "Aura de Calor"
+  (execução `free`, `alcance: 'short'`). Ícones em `systems/tormenta20/icons/poderes/ameacas/<nome>.webp`.
+- **Vantagem contra magia** vira Resistência a Magia +2 (Iniciante, ND até 4) ou +5 (decisão do mestre).
 
 ## 8. Formato do Tormenta20 (sistema 1.6.6)
 
@@ -216,6 +223,10 @@ As descrições trazem enriquecedores e HTML. Regras usadas: tirar HTML (parágr
 - **Rolagem de dano da arma**: `parts[0]` é o dano principal (fórmula e tipo), `parts[1]` é o campo do atributo somado ao dano
   (fica vazio) e o **dano adicional começa em `parts[2]`** (confirmado em `item-rolls.hbs`). Gravar o adicional em `parts[1]`
   esconde-o na ficha. O Ajustar ND recalcula só `parts[0]` e mantém as demais partes fixas (a soma delas é o "secundário").
+- **Atualizar uma perícia a redefine** (1.6.6 no Foundry 14): um campo atualizado sozinho faz os outros voltarem ao padrão
+  (atributo `for`, `outros` 0). O envio do formulário da ficha ao fechá-la (`submitOnClose: true`) faz isso; um hook `preUpdateActor`
+  não resolve, porque recebe os dados já limpos. O módulo envolve `Actor.update` nos atores com a flag `t20-conversor-5e`
+  e completa a atualização com os valores atuais (`conversor/pericias.js`). No Foundry 13 com o sistema 1.5.015 o problema não ocorre.
 - **Perícias do NPC**: o sistema pode criá-las todas com atributo `for`, o que faz Fortitude, Reflexos e Vontade ficarem
   acima do alvo (+1, +7, +5 no dragão: 7 menos o modificador certo). O conversor devolve cada perícia ao atributo da regra e roda o
   ajuste duas vezes. Fortitude ainda aparece como FOR na ficha, só no rótulo; os valores batem com a tabela.

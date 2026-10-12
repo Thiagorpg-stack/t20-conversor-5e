@@ -1,6 +1,7 @@
 // 5e para T20 — ponto de entrada. Depende do módulo Ajustar ND (0.9.0 ou mais recente).
 import { ID_CONVERSOR } from './conversor/criar-ator.js';
 import { abrirConversor } from './dialogo-conversor.js';
+import { completarPericiasParciais } from './conversor/pericias.js';
 
 Hooks.once('init', () => {
   game.settings.register(ID_CONVERSOR, 'nivelGrupo', {
@@ -38,6 +39,13 @@ Hooks.on('renderActorDirectory', (_app, html) => {
 });
 
 Hooks.once('ready', () => {
+  // Só nos atores criados por este módulo: completa as atualizações parciais de perícia (ver conversor/pericias.js).
+  const Ator = CONFIG.Actor.documentClass;
+  const atualizar = Ator.prototype.update;
+  Ator.prototype.update = function (dados, contexto) {
+    const completos = this.getFlag(ID_CONVERSOR, 'origem') ? completarPericiasParciais(this._source.system?.pericias, dados) : dados;
+    return atualizar.call(this, completos, contexto);
+  };
   game.modules.get(ID_CONVERSOR).api = { versaoApi: 1, abrirConversor };
   // Sem checar o Ajustar ND aqui: ele publica a API no próprio `ready`, que pode rodar depois deste.
   // abrirConversor() confere na hora de abrir.

@@ -74,10 +74,31 @@ export function termosT20(texto) {
     .replace(/(\d+)-foot-radius (Sphere|Cylinder|Emanation)\b/gi, (_, n, f) => `${FORMAS[f.toLowerCase()]} de ${emMetros(n)} de raio`)
     .replace(/(\d+)-foot-long,? (?:and )?(\d+)-foot-wide Line\b/gi, (_, c, l) => `linha de ${emMetros(c)} de comprimento e ${emMetros(l)} de largura`)
     .replace(/(\d+)-foot (Cone|Cube|Sphere|Cylinder|Emanation|Line)\b/gi, (_, n, f) => `${FORMAS[f.toLowerCase()]} de ${emMetros(n)}${/cube/i.test(f) ? ' de lado' : ''}`)
-    .replace(/(?<!×\s*)\b(\d+)(?:-|\s*)(?:feet|foot|ft\.?)(?![\w-])/gi, (_, n) => alcanceT20(Number(n)))
+    // "120 ft. Hit": o ponto de "ft." fica quando ele fecha a frase
+    .replace(/(?<!×\s*)\b(\d+)(?:-|\s*)(?:feet|foot|ft)(\.)?(?![\w-])/gi, (todo, n, ponto, pos, texto) => `${alcanceT20(Number(n))}${ponto && /^(\s+[A-Z]|$)/.test(texto.slice(pos + todo.length)) ? '.' : ''}`)
     .replace(/\b(cone|sphere|cube|cylinder|emanation)\b/gi, (f) => FORMAS[f.toLowerCase()])
     .replace(/\bLine\b(?! of)/g, 'linha');
 }
+
+// Campo "área" do poder, como nos poderes oficiais ("cubo 3m de lado"), a partir do modelo de área do dnd5e ({ type, size, width, units }).
+export function areaT20({ type, size, width, units } = {}) {
+  const metros = (n) => String(units === 'm' ? n : pesParaMetros(n)).replace('.', ',');
+  if (!type || !(Number(size) > 0)) return '';
+  const forma = {
+    line: () => `linha ${metros(size)}m x ${metros(width || 5)}m`, cone: () => `cone ${metros(size)}m`,
+    sphere: () => `esfera ${metros(size)}m de raio`, radius: () => `esfera ${metros(size)}m de raio`,
+    cylinder: () => `cilindro ${metros(size)}m de raio`, cube: () => `cubo ${metros(size)}m de lado`, emanation: () => `emanação ${metros(size)}m`,
+  }[type];
+  return forma ? forma() : '';
+}
+
+// Condições da 5e em texto livre (imunidades "charmed (with Mind Blank)") pelos nomes do T20.
+const CONDICOES_T20 = {
+  blinded: 'cego', charmed: 'enfeitiçado', deafened: 'surdo', diseased: 'doente', exhaustion: 'exausto', frightened: 'apavorado',
+  grappled: 'agarrado', paralyzed: 'paralisado', petrified: 'petrificado', poisoned: 'envenenado', prone: 'caído',
+  restrained: 'enredado', stunned: 'atordoado', unconscious: 'inconsciente',
+};
+export const condicoesT20 = (texto) => String(texto ?? '').replace(new RegExp(String.raw`\b(${Object.keys(CONDICOES_T20).join('|')})\b`, 'gi'), (c) => CONDICOES_T20[c.toLowerCase()]);
 
 // ---------- Tamanho ----------
 

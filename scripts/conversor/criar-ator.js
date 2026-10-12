@@ -40,6 +40,31 @@ export const rdDoND = (nd) => {
 
 const RECURSOS = ['primary', 'secondary', 'tertiary'];
 
+// Poderes de criatura que o compêndio "Habilidades de Criaturas" do T20 já tem: reaproveita o nome, o ícone, o tipo e a
+// ativação dos oficiais e troca só o texto. Magias: poder passivo "Magias" (o texto lista as magias). Resistência a Magia:
+// a 5e dá vantagem nos testes contra magia; o T20 dá +2 em Fortitude, Reflexos e Vontade (patamar Iniciante, ND até 4) ou +5.
+function poderOficial(h, nd, gerarId) {
+  if (h.oficial === 'magias') {
+    return { nome: 'Magias', img: 'systems/tormenta20/icons/poderes/ameacas/magias.webp', tipo: 'racial', execucao: 'passive' };
+  }
+  if (h.oficial === 'resistenciaMagia') {
+    const bonus = valorND(nd) <= 4 ? 2 : 5;
+    return {
+      nome: 'Resistência a Magia', descricao: `<p>Esta criatura tem resistência a magia +${bonus}.</p>`, execucao: 'passive',
+      img: 'systems/tormenta20/icons/poderes/ameacas/resistencia-magia.webp',
+      effects: [{
+        _id: gerarId(), name: 'Resistência a Magia', img: 'icons/svg/upgrade.svg', origin: '', tint: '#ffffff', transfer: true, disabled: true,
+        type: 'base', statuses: [], sort: 0, showIcon: 1, description: '', folder: null,
+        duration: { value: null, units: 'seconds', expiry: null, expired: false },
+        flags: { tormenta20: { onuse: true, durationScene: false, self: false, attack: false, skill: true, ability: false, power: false,
+          equipment: false, spell: false, consumable: false, items: 'Fortitude;Reflexos;Vontade', aumenta: false, custo: '' } },
+        system: { changes: [{ key: 'roll', value: bonus, priority: null, type: 'add', phase: 'initial' }] },
+      }],
+    };
+  }
+  return {};
+}
+
 // Valores de CONST.TOKEN_DISPLAY_MODES: nome ao passar o mouse (dono) e barra sempre visível para o dono, como no original.
 const TOKEN_NOME_DONO_PASSA_MOUSE = 20;
 const TOKEN_BARRA_DONO = 40;
@@ -101,14 +126,14 @@ export function montarDadosAtor(criatura, { nd, gerarId, pasta = null, ndReferen
   let recursoLivre = 0; // a ficha tem 3 contadores; poderes com usos limitados consomem um deles
   const poderes = (criatura.habilidades ?? []).map((h) => {
     const item = criarItemPoder({
-      nome: h.nome, descricao: paragrafos(h.texto), execucao: h.execucao, dano: h.dano,
+      nome: h.nome, descricao: paragrafos(h.texto), execucao: h.execucao, dano: h.dano, area: h.area,
       resistenciaTxt: h.resistencia ? `${NOME_DA_PERICIA[h.resistencia.pericia]} ${h.resistencia.metade ? 'Metade' : 'anula'}` : '',
+      ...poderOficial(h, nd, gerarId),
     });
     item._id = gerarId();
     if (h.usos && recursoLivre < RECURSOS.length) {
-      const recurso = RECURSOS[recursoLivre++];
-      sys.resources[recurso] = { value: h.usos, max: h.usos, label: h.nome };
-      item.system.consume = { amount: 1, mpMultiplier: false, target: recurso, type: 'attribute' };
+      // Contador manual: o poder do T20 não tem campo de consumo (o sistema o remove do esquema).
+      sys.resources[RECURSOS[recursoLivre++]] = { value: h.usos, max: h.usos, label: h.nome };
     }
     // O Ajustar ND só mexe no dano do poder que tem esta flag.
     if (h.dano?.length) item.flags = { [ID_AJUSTE_ND]: { danoPoder: { ajustar: h.ajustarDano, efeito: h.efeito } } };
