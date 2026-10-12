@@ -189,6 +189,15 @@ As descrições trazem enriquecedores e HTML. Regras usadas: tirar HTML (parágr
   proporção sai errada (2d8 vale 9; com +7 vale 16).
 - `@variantrule[Line [Area of Effect]|XPHB|Line]` tem colchetes aninhados; `[[/save ability=dex dc=15]]` é teste de resistência.
 
+- **Texto dos poderes em termos do T20** (decisões do mestre): áreas em metros (pés × 0,3, múltiplo de 1,5 m) e distâncias
+  como alcance curto (até 30 pés, 9 m), médio (até 90 pés) ou longo (acima); até 10 pés ficam em metros. Distância de queda
+  ("× 10 feet") não é alcance e fica como está. Toda CD segue a CD do ND da criatura, então o `[[/save ... dc=15]]` de efeitos
+  de região também vira a CD da tabela.
+- **Conjurador**: PM = 5 × ND (valor sugerido pelo mestre; o Chefe Final soma `2 × ND` por cima). O atributo de conjuração vem de
+  `system.attributes.spellcasting` (`cha` → `car`, `wis` → `sab`).
+- **Contador de uso**: o T20 consome recursos da ficha por `system.consume = { type: 'attribute', target: 'primary', amount: 1 }`
+  (o alvo é a chave em `system.resources`: `primary`, `secondary`, `tertiary`).
+
 ## 8. Formato do Tormenta20 (sistema 1.6.6)
 
 - **Ator NPC**: `system.atributos.X.base` (modificador), `system.attributes.{nd (texto), cd, defesa.base, pv, movement.walk.base (m)}`,
@@ -250,7 +259,6 @@ em `!actors.items!<ator>.<item>`. Sem instalar nada e sem tocar nos arquivos ori
 ## 11. O que NÃO foi verificado
 
 - Por que o atributo das perícias do NPC vira `for` (sistema ou formulário da ficha); a causa não foi achada.
-- A CD de testes de resistência de efeitos de região (ex.: afundamento do covil, CD 15 na 5e) vira a CD da tabela.
 - A regra do livro para o dano de poderes de reação, movimento, livre e passivo; só os padrões dos dados.
 - O fator "sem efeito" (0,7) e o fator para poderes de alvo único de ação padrão.
 - Os limites de dados e de bônus fixo em ND alto (o mestre vai pesquisar nos livros); o limite ND+1 é o que

@@ -83,7 +83,7 @@ export class DialogoConversor extends HandlebarsApplicationMixin(ApplicationV2) 
     this.estado = {
       nome: '', conceito: '', img: '', token: '', cr: '5', papel: 'solo', nivelGrupo: nivelPadrao,
       ritmo: game.settings.get(ID_CONVERSOR, 'ritmo'),
-      nd: null, ndManual: false, chefeFinal: false,
+      nd: null, ndManual: false, chefeFinal: false, conjurador: false, conjuracao: 'int',
       tamanho: 'med', tipo: 'mon', deslocamento: 9,
       atributos: Object.fromEntries(ATRIBUTOS.map((a) => [a, 0])),
       ordem: ['fort', 'refl', 'vont'],
@@ -267,6 +267,7 @@ export class DialogoConversor extends HandlebarsApplicationMixin(ApplicationV2) 
     e.tipo = valor('tipo') ?? e.tipo;
     e.deslocamento = valor('deslocamento') ?? e.deslocamento;
     e.chefeFinal = el.querySelector('[name=chefeFinal]')?.checked ?? e.chefeFinal;
+    e.conjurador = el.querySelector('[name=conjurador]')?.checked ?? e.conjurador;
     e.modoAtaques = valor('modoAtaques') ?? e.modoAtaques;
     ATRIBUTOS.forEach((a) => { e.atributos[a] = valor(`atributo-${a}`) ?? e.atributos[a]; });
     e.ordem = [0, 1, 2].map((i) => valor(`ordem-${i}`) ?? e.ordem[i]);

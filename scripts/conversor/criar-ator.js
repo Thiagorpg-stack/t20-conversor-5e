@@ -38,6 +38,8 @@ export const rdDoND = (nd) => {
   return 20;
 };
 
+const RECURSOS = ['primary', 'secondary', 'tertiary'];
+
 // Valores de CONST.TOKEN_DISPLAY_MODES: nome ao passar o mouse (dono) e barra sempre visível para o dono, como no original.
 const TOKEN_NOME_DONO_PASSA_MOUSE = 20;
 const TOKEN_BARRA_DONO = 40;
@@ -53,6 +55,10 @@ export function montarDadosAtor(criatura, { nd, gerarId, pasta = null, ndReferen
   const sys = dados.system;
   for (const [chave, mod] of Object.entries(criatura.atributos)) sys.atributos[chave].base = mod;
   sys.attributes.nd = String(nd);
+  if (criatura.conjurador) { // sem PM o conjurador não lança nada: 5 por ND (valor sugerido, o mestre pode mudar)
+    sys.attributes.pm.max = sys.attributes.pm.value = Math.max(1, Math.round(5 * valorND(nd)));
+    sys.attributes.conjuracao = criatura.conjuracao;
+  }
   sys.attributes.movement.walk.base = criatura.deslocamento;
   for (const [tipo, metros] of Object.entries(criatura.deslocamentosExtra ?? {})) sys.attributes.movement[tipo].base = metros;
   sys.detalhes.role = papelDoSistema(criatura.papel);
@@ -92,12 +98,18 @@ export function montarDadosAtor(criatura, { nd, gerarId, pasta = null, ndReferen
     item.flags = { [ID_CONVERSOR]: { indiceAtaque: indice } };
     return item;
   });
+  let recursoLivre = 0; // a ficha tem 3 contadores; poderes com usos limitados consomem um deles
   const poderes = (criatura.habilidades ?? []).map((h) => {
     const item = criarItemPoder({
       nome: h.nome, descricao: paragrafos(h.texto), execucao: h.execucao, dano: h.dano,
       resistenciaTxt: h.resistencia ? `${NOME_DA_PERICIA[h.resistencia.pericia]} ${h.resistencia.metade ? 'Metade' : 'anula'}` : '',
     });
     item._id = gerarId();
+    if (h.usos && recursoLivre < RECURSOS.length) {
+      const recurso = RECURSOS[recursoLivre++];
+      sys.resources[recurso] = { value: h.usos, max: h.usos, label: h.nome };
+      item.system.consume = { amount: 1, mpMultiplier: false, target: recurso, type: 'attribute' };
+    }
     // O Ajustar ND só mexe no dano do poder que tem esta flag.
     if (h.dano?.length) item.flags = { [ID_AJUSTE_ND]: { danoPoder: { ajustar: h.ajustarDano, efeito: h.efeito } } };
     return item;

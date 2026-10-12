@@ -63,6 +63,22 @@ export function pesParaMetros(pes) {
   return Math.round(metros / 1.5) * 1.5;
 }
 
+// Distâncias e áreas do texto em termos do T20: áreas em metros (linha, cone, esfera...) e alcances em curto, médio e longo.
+const FORMAS = { line: 'linha', cone: 'cone', sphere: 'esfera', cube: 'cubo', cylinder: 'cilindro', emanation: 'emanação' };
+const emMetros = (pes) => `${String(pesParaMetros(pes)).replace('.', ',')} m`;
+// Até 10 pés é alcance de toque ou adjacente e vira metros; acima, vale a categoria: até 30 pés curto, até 90 médio, mais que isso longo.
+const alcanceT20 = (pes) => (pes <= 10 ? emMetros(pes) : pes <= 30 ? 'alcance curto' : pes <= 90 ? 'alcance médio' : 'alcance longo');
+
+export function termosT20(texto) {
+  return String(texto ?? '')
+    .replace(/(\d+)-foot-radius (Sphere|Cylinder|Emanation)\b/gi, (_, n, f) => `${FORMAS[f.toLowerCase()]} de ${emMetros(n)} de raio`)
+    .replace(/(\d+)-foot-long,? (?:and )?(\d+)-foot-wide Line\b/gi, (_, c, l) => `linha de ${emMetros(c)} de comprimento e ${emMetros(l)} de largura`)
+    .replace(/(\d+)-foot (Cone|Cube|Sphere|Cylinder|Emanation|Line)\b/gi, (_, n, f) => `${FORMAS[f.toLowerCase()]} de ${emMetros(n)}${/cube/i.test(f) ? ' de lado' : ''}`)
+    .replace(/(?<!×\s*)\b(\d+)(?:-|\s*)(?:feet|foot|ft\.?)(?![\w-])/gi, (_, n) => alcanceT20(Number(n)))
+    .replace(/\b(cone|sphere|cube|cylinder|emanation)\b/gi, (f) => FORMAS[f.toLowerCase()])
+    .replace(/\bLine\b(?! of)/g, 'linha');
+}
+
 // ---------- Tamanho ----------
 
 const TAMANHOS = {
