@@ -1,7 +1,8 @@
 // Monta os dados do ator T20 a partir da criatura neutra. As funções daqui são puras;
 // quem cria o ator no Foundry (diálogo) injeta gerarId e usa Actor.create.
 import { criarActorTemplate, criarItemArma, criarItemPoder } from './modelo-ator.js';
-import { papelDoSistema } from './mapeamentos.js';
+import { papelDoSistema, valorND, NOME_DA_PERICIA } from './mapeamentos.js';
+import { ID_AJUSTE_ND } from '../api-ajuste-nd.js';
 
 export const ID_CONVERSOR = 't20-conversor-5e';
 export const NOME_PASTA = 'Convertidos de 5e';
@@ -27,7 +28,21 @@ function linhaDeAtaques(ataques) {
   return `${partes.length > 1 ? `${partes.slice(0, -1).join(', ')} e ${partes.at(-1)}` : partes[0]}.`;
 }
 
-const paragrafos =(texto) => String(texto ?? '').split('\n').filter(Boolean).map((l) => `<p>${escaparHtml(l)}</p>`).join('');
+// RD por tipo de dano a partir do patamar do ND (Iniciante até 4, Veterano até 10, Campeão até 16, Lenda acima).
+// Sugestão: segue as fichas oficiais (Golem de Ferro ND 10 tem RD 10; Dragão Venerável ND 15 tem RD 15). O mestre ajusta.
+export const rdDoND = (nd) => {
+  const v = valorND(nd);
+  if (v <= 4) return 5;
+  if (v <= 10) return 10;
+  if (v <= 16) return 15;
+  return 20;
+};
+
+// Valores de CONST.TOKEN_DISPLAY_MODES: nome ao passar o mouse (dono) e barra sempre visível para o dono, como no original.
+const TOKEN_NOME_DONO_PASSA_MOUSE = 20;
+const TOKEN_BARRA_DONO = 40;
+
+const paragrafos = (texto) => String(texto ?? '').split('\n').filter(Boolean).map((l) => `<p>${escaparHtml(l)}</p>`).join('');
 
 // `nd` é o ND (texto) escolhido; `ndReferencia` e `meta` só vão para a flag de rastreio.
 export function montarDadosAtor(criatura, { nd, gerarId, pasta = null, ndReferencia = null, agora = new Date().toISOString() }) {
@@ -42,13 +57,17 @@ export function montarDadosAtor(criatura, { nd, gerarId, pasta = null, ndReferen
   sys.detalhes.role = papelDoSistema(criatura.papel);
   sys.detalhes.tipo = criatura.tipo;
   sys.tracos.tamanho = criatura.tamanho;
-  const biografia = [criatura.conceito, ...criatura.notas].filter(Boolean);
-  if (biografia.length) sys.detalhes.biography.value = biografia.map((l) => `<p>${escaparHtml(l)}</p>`).join('');
+  if (criatura.conceito) sys.detalhes.biography.value = `<p>${escaparHtml(criatura.conceito)}</p>`;
   sys.detalhes.resistencias = criatura.resistencias;
+  const { imunidade, vulnerabilidade, reducao } = criatura.resistenciasDano;
+  const rd = rdDoND(nd);
+  for (const tipo of imunidade) sys.tracos.resistencias[tipo].imunidade = true;
+  for (const tipo of vulnerabilidade) sys.tracos.resistencias[tipo].vulnerabilidade = true;
+  for (const tipo of reducao) sys.tracos.resistencias[tipo].base = rd; // a 5e reduz à metade; o T20 usa RD por tipo
   sys.detalhes.ataquescac = linhaDeAtaques(criatura.ataques.filter((a) => !a.distancia));
   sys.detalhes.ataquesad = linhaDeAtaques(criatura.ataques.filter((a) => a.distancia));
   sys.attributes.sentidos = { value: criatura.sentidos.value, custom: criatura.sentidos.custom };
-  sys.tracos.idiomas.value = criatura.idiomas;
+  sys.tracos.idiomas = { value: criatura.idiomas, custom: criatura.idiomasCustom };
   sys.tracos.ic = { value: criatura.imunidadesCondicao.value, custom: criatura.imunidadesCondicao.custom };
 
   // Sem imagem escolhida ficam os ícones do modelo; sem token, o token usa o retrato.
@@ -58,6 +77,8 @@ export function montarDadosAtor(criatura, { nd, gerarId, pasta = null, ndReferen
 
   const casas = CASAS_DO_TAMANHO[criatura.tamanho] ?? 1;
   dados.prototypeToken.name = criatura.nome;
+  dados.prototypeToken.displayName = TOKEN_NOME_DONO_PASSA_MOUSE;
+  dados.prototypeToken.displayBars = TOKEN_BARRA_DONO;
   dados.prototypeToken.width = casas;
   dados.prototypeToken.height = casas;
 
@@ -71,8 +92,13 @@ export function montarDadosAtor(criatura, { nd, gerarId, pasta = null, ndReferen
     return item;
   });
   const poderes = (criatura.habilidades ?? []).map((h) => {
-    const item = criarItemPoder({ nome: h.nome, descricao: paragrafos(h.texto) });
+    const item = criarItemPoder({
+      nome: h.nome, descricao: paragrafos(h.texto), execucao: h.execucao, dano: h.dano,
+      resistenciaTxt: h.resistencia ? `${NOME_DA_PERICIA[h.resistencia.pericia]} ${h.resistencia.metade ? 'Metade' : 'anula'}` : '',
+    });
     item._id = gerarId();
+    // O Ajustar ND só mexe no dano do poder que tem esta flag.
+    if (h.dano?.length) item.flags = { [ID_AJUSTE_ND]: { danoPoder: { ajustar: h.ajustarDano, efeito: h.efeito } } };
     return item;
   });
   dados.items = [...armas, ...poderes];

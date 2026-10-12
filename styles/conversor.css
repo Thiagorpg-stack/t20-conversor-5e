@@ -41,7 +41,9 @@
 .t20-conversor-5e .conversor__poder { display: flex; flex-direction: column; gap: 0.25rem; padding-bottom: 0.5rem; border-bottom: 1px solid #8884; }
 .t20-conversor-5e .conversor__poder .conversor__linha { flex-wrap: nowrap; align-items: center; }
 .t20-conversor-5e .conversor__poder input { flex: 1 1 auto; }
+.t20-conversor-5e .conversor__poder select { flex: 0 0 auto; }
 .t20-conversor-5e .conversor__poder button { flex: 0 0 auto; width: auto; }
+.t20-conversor-5e .conversor__dano { display: flex; flex-wrap: wrap; align-items: center; gap: 0.25rem 0.75rem; }
 .t20-conversor-5e .conversor__poder textarea { width: 100%; resize: vertical; }
 
 .t20-conversor-5e .conversor__marca { flex-direction: row !important; align-items: center; gap: 0.4rem !important; font-size: 1em !important; }

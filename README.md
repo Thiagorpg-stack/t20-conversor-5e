@@ -2,7 +2,7 @@
 
 Módulo para Foundry VTT que converte criaturas de **D&D 5e** em ameaças de **Tormenta20**, usando as tabelas por ND e papel (Solo, Lacaio ou Especial) e o motor do módulo **Ajustar ND**.
 
-> **Status: em desenvolvimento.** Este repositório contém só o esqueleto. Ainda não há funcionalidade.
+> **Status: v0.2.0 (em teste).** A v1, "Criar ameaça a partir de CR", e a v2, "Importar JSON de 5e", estão implementadas. A v3 (texto colado) ainda não existe. A 0.2.0 converte também o **dano dos poderes** (veja abaixo) e exige o Ajustar ND 0.10.0.
 
 *English: Foundry VTT module that converts D&D 5e creatures into Tormenta20 threats, using the per-ND and per-role parameter tables.*
 
@@ -10,7 +10,17 @@ Módulo para Foundry VTT que converte criaturas de **D&D 5e** em ameaças de **T
 
 - Converte só os **números** (ND, papel, PV, Defesa, CD, ataque, resistências e dano), pela tabela.
 - Entrega as habilidades, magias e ações lendárias como **texto para revisão**; não traduz regras.
+- **Poderes com dano** (sopro, constrição, rugido...): lê o dano (dado, bônus, tipo) e o teste de resistência da 5e, troca "Constitution Saving Throw" por "Fortitude" (e os demais atributos pela perícia do T20), cria a rolagem de dano no poder e marca o poder para o Ajustar ND recalcular o dano pela tabela. Por poder, o diálogo permite desligar o ajuste ("Ajustar o dano pela tabela do ND") e escolher se tem efeito (condição, teste de resistência ou área). Carisma e Inteligência viram Vontade (padrão assumido).
 - Calcula o ND com uma **calibração de ritmo**: um grupo de T20 aguenta 1 a 2 combates do seu ND por descanso, e em 5e o dia de aventura espera 6 a 8. O mestre informa o nível do grupo e o ritmo desejado.
+
+## Como usar (v1)
+
+1. Como Mestre, abra o diretório de atores e clique em **5e para T20**.
+2. Informe nome, CR, papel, tamanho, tipo, atributos e os ataques da criatura.
+3. Informe o **nível do grupo** e o **ritmo do dia** (ou deixe o nível vazio para usar o ND de referência do CR). O módulo mostra o ND de referência e o ND calibrado, e você pode escolher outro.
+4. Confira a prévia (PV, CD, Defesa, ataque, resistências e dano por golpe, com avisos) e clique em **Criar ameaça**. O ator é criado na pasta "Convertidos de 5e".
+
+O nível do grupo e o ritmo padrão ficam nas configurações do módulo.
 
 ### Versões planejadas
 
@@ -20,7 +30,7 @@ Módulo para Foundry VTT que converte criaturas de **D&D 5e** em ameaças de **T
 
 ## Dependências
 
-- Foundry VTT v13
+- Foundry VTT v13 ou mais recente (verificado na 14.369)
 - Sistema [Tormenta20](https://gitlab.com/vizael/Tormenta20) (não oficial)
 - Módulo **Ajustar ND** (`tormenta20-ajuste-nd`), que fornece as tabelas e a API de ajuste
 

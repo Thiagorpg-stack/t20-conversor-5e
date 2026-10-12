@@ -132,8 +132,17 @@
     <div class="conversor__poder" data-poder="{{indice}}">
       <div class="conversor__linha">
         <input type="text" data-campo-poder="nome" value="{{nome}}" placeholder="{{localize 'T20C5E.PoderNome'}}">
+        <select data-campo-poder="execucao" title="{{localize 'T20C5E.PoderExecucao'}}">{{#each execucoes}}<option value="{{valor}}" {{#if selecionado}}selected{{/if}}>{{rotulo}}</option>{{/each}}</select>
         <button type="button" data-action="removerPoder" data-indice="{{indice}}" title="{{localize 'T20C5E.Remover'}}"><i class="fas fa-trash"></i></button>
       </div>
+      {{#if temDano}}
+      <div class="conversor__dano">
+        <span>{{localize "T20C5E.PoderDano5e"}}: <code>{{danoTexto}}</code>{{#if teste}} · {{localize "T20C5E.PoderTeste"}}: {{teste}}{{/if}}</span>
+        <label class="conversor__marca"><input type="checkbox" data-campo-poder="ajustarDano" {{#if ajustarDano}}checked{{/if}}> {{localize "T20C5E.PoderAjustarDano"}}</label>
+        <label class="conversor__marca" title="{{localize 'T20C5E.PoderEfeitoDica'}}"><input type="checkbox" data-campo-poder="efeito" {{#if efeito}}checked{{/if}} {{#unless padrao}}disabled{{/unless}}> {{localize "T20C5E.PoderEfeito"}}</label>
+        {{#if depois}}<span>→ <code>{{depois}}</code></span>{{/if}}
+      </div>
+      {{/if}}
       <textarea data-campo-poder="texto" rows="3">{{texto}}</textarea>
     </div>
     {{else}}
@@ -157,6 +166,10 @@
     {{#if previa.armas.length}}
     <p><strong>{{localize "T20C5E.DanoPorGolpe"}}</strong> ({{localize "T20C5E.AlvoRodada"}}: {{previa.danoAlvo}})</p>
     <ul>{{#each previa.armas}}<li>{{nome}} × {{qtd}}: <code>{{formula}}</code></li>{{/each}}</ul>
+    {{/if}}
+    {{#if previa.poderes.length}}
+    <p><strong>{{localize "T20C5E.DanoPoderes"}}</strong></p>
+    <ul>{{#each previa.poderes}}<li>{{nome}}: <code>{{antes}}</code> → <code>{{depois}}</code></li>{{/each}}</ul>
     {{/if}}
     {{#if previa.avisos.length}}<div class="conversor__avisos"><strong>{{localize "T20C5E.Avisos"}}</strong><ul>{{#each previa.avisos}}<li>{{this}}</li>{{/each}}</ul></div>{{/if}}
     {{#if previa.patamar.length}}<div class="conversor__avisos"><strong>{{localize "T20C5E.Patamar"}}</strong><ul>{{#each previa.patamar}}<li>{{this}}</li>{{/each}}</ul></div>{{/if}}

@@ -15,7 +15,7 @@ globalThis.foundry = {
 const ajusteNd = {
   active: true,
   api: {
-    versaoApi: 1,
+    versaoApi: 2,
     obterTabelas: async () => tabelas,
     simular: async (actor, opcoes) => {
       chamadas.push({ actor, opcoes });
@@ -152,5 +152,65 @@ test('Ajustar ND ausente ou antigo gera mensagem clara', async () => {
   ajusteNd.api = { versaoApi: 0 };
   ctx = await new DialogoConversor()._prepareContext();
   assert.deepEqual(ctx.erros, ['T20C5E.ErroAjusteNdAntigo']);
+  ajusteNd.api = { versaoApi: 1 }; // sem o dano dos poderes (Ajustar ND 0.9.x)
+  ctx = await new DialogoConversor()._prepareContext();
+  assert.deepEqual(ctx.erros, ['T20C5E.ErroAjusteNdAntigo']);
   Object.assign(ajusteNd, original);
+});
+
+const sopro = { nome: 'Sopro', texto: 'CD 14', execucao: 'action', dano: [{ formula: '3d8+3', tipo: 'impacto' }, { formula: '2d6', tipo: 'fogo' }],
+  resistencia: { pericia: 'refl', metade: true }, efeito: true, ajustarDano: true };
+
+test('poder com dano: a tela mostra o dano da 5e, o teste e as caixas; o ator leva a flag do Ajustar ND', async () => {
+  chamadas.length = 0;
+  const d = new DialogoConversor();
+  d.estado.nome = 'Otyugh';
+  d.estado.habilidades = [{ nome: 'Fuga', texto: 'x', execucao: '' }, structuredClone(sopro)];
+  const ctx = await d._prepareContext();
+  assert.equal(ctx.poderes[0].temDano, false);
+  const p = ctx.poderes[1];
+  assert.deepEqual([p.temDano, p.ajustarDano, p.efeito, p.padrao], [true, true, true, true]);
+  assert.equal(p.danoTexto, '3d8+3 (Impacto) + 2d6 (Fogo)');
+  assert.equal(p.teste, 'Reflexos (metade)');
+  const item = chamadas[0].actor.dados.items.find((i) => i.name === 'Sopro');
+  assert.deepEqual(item.flags['tormenta20-ajuste-nd'], { danoPoder: { ajustar: true, efeito: true } });
+});
+
+test('poder que não é de ação padrão ou completa não usa a caixa "com efeito"', async () => {
+  const d = new DialogoConversor();
+  d.estado.nome = 'X';
+  d.estado.habilidades = [{ ...structuredClone(sopro), execucao: 'reaction' }, { ...structuredClone(sopro), nome: 'Cheio', execucao: 'full' }];
+  const ctx = await d._prepareContext();
+  assert.deepEqual(ctx.poderes.map((p) => p.padrao), [false, true]);
+});
+
+test('prévia: a fórmula calculada pelo Ajustar ND aparece no poder e na lista de danos dos poderes', async () => {
+  const original = ajusteNd.api.simular;
+  ajusteNd.api.simular = async (actor, opcoes) => {
+    const id = actor.dados.items.find((i) => i.name === 'Sopro')._id;
+    return {
+      ...(await original(actor, opcoes)),
+      poderesPrevia: [{ id, nome: 'Sopro', padrao: true, ajustar: true, efeito: true, antes: '3d8+3 + 2d6', depois: '4d8 + 2d6' }],
+    };
+  };
+  try {
+    const d = new DialogoConversor();
+    d.estado.nome = 'Otyugh';
+    d.estado.habilidades = [{ nome: 'Fuga', texto: 'x', execucao: '' }, structuredClone(sopro)];
+    const ctx = await d._prepareContext();
+    assert.equal(ctx.poderes[0].depois, null);
+    assert.equal(ctx.poderes[1].depois, '4d8 + 2d6');
+    assert.deepEqual(ctx.previa.poderes, [{ nome: 'Sopro', antes: '3d8+3 + 2d6', depois: '4d8 + 2d6' }]);
+  } finally {
+    ajusteNd.api.simular = original;
+  }
+});
+
+test('prévia sem poderesPrevia (Ajustar ND antigo) não quebra', async () => {
+  const d = new DialogoConversor();
+  d.estado.nome = 'X';
+  d.estado.habilidades = [structuredClone(sopro)];
+  const ctx = await d._prepareContext();
+  assert.deepEqual(ctx.previa.poderes, []);
+  assert.equal(ctx.poderes[0].depois, null);
 });

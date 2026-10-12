@@ -144,3 +144,21 @@ export function papelDoSistema(papel) {
 export function trocarDCporCD(texto) {
   return String(texto ?? '').replace(/\bDC(\s*\d+)/g, 'CD$1');
 }
+
+// ---------- Teste de resistência ----------
+
+// Força → Atletismo, Destreza → Reflexos, Constituição → Fortitude, Sabedoria → Vontade;
+// Carisma e Inteligência também viram Vontade (padrão assumido, a mestre pode trocar).
+const PERICIA_DO_ATRIBUTO_5E = { str: 'atle', dex: 'refl', con: 'fort', wis: 'vont', cha: 'vont', int: 'vont' };
+const ATRIBUTO_5E_POR_NOME = { strength: 'str', dexterity: 'dex', constitution: 'con', wisdom: 'wis', charisma: 'cha', intelligence: 'int' };
+export const NOME_DA_PERICIA = { atle: 'Atletismo', refl: 'Reflexos', fort: 'Fortitude', vont: 'Vontade' };
+
+// 'dex' → 'refl'. Atributo desconhecido: null.
+export const periciaDoAtributo5e = (atributo) => PERICIA_DO_ATRIBUTO_5E[String(atributo ?? '').trim().toLowerCase()] ?? null;
+export const ehAtributoPadraoDeVontade = (atributo) => ['cha', 'int'].includes(String(atributo ?? '').trim().toLowerCase());
+
+// "Constitution Saving Throw" → "Fortitude".
+export function trocarTesteResistencia(texto) {
+  return String(texto ?? '').replace(/\b(Strength|Dexterity|Constitution|Wisdom|Charisma|Intelligence)\s+Saving\s+Throw\b/gi,
+    (_, nome) => NOME_DA_PERICIA[periciaDoAtributo5e(ATRIBUTO_5E_POR_NOME[nome.toLowerCase()])]);
+}

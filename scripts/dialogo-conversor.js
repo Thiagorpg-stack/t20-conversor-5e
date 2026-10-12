@@ -4,8 +4,8 @@ import { obterApi } from './api-ajuste-nd.js';
 import { calcularND, linhaDoND, RITMOS } from './conversor/ritmo.js';
 import { lerAtor5e } from './conversor/origem-json.js';
 import { PASTA_IMAGENS, nomeDoArquivo, ehUrl, tokenDoCdn5e, urlsCandidatas } from './conversor/imagem.js';
-import { papelDoSistema, ndDeReferencia, CODIGOS_TAMANHO, CODIGOS_TIPO, CHAVES_DANO } from './conversor/mapeamentos.js';
-import { criaturaDeFormulario, aplicarModoAtaques, MODOS_ATAQUES, ATRIBUTOS } from './conversor/origem-cr.js';
+import { papelDoSistema, ndDeReferencia, CODIGOS_TAMANHO, CODIGOS_TIPO, CHAVES_DANO, NOME_DA_PERICIA } from './conversor/mapeamentos.js';
+import { criaturaDeFormulario, aplicarModoAtaques, poderDaTela, MODOS_ATAQUES, EXECUCOES, ATRIBUTOS } from './conversor/origem-cr.js';
 import { montarDadosAtor, ataquesPorArmaDe, ID_CONVERSOR, NOME_PASTA } from './conversor/criar-ator.js';
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
@@ -90,7 +90,8 @@ export class DialogoConversor extends HandlebarsApplicationMixin(ApplicationV2) 
       modoAtaques: '5e', // ver aplicarModoAtaques
       // abaixo: só vêm da importação
       habilidades: [], // viram poderes só com o texto
-      sentidos: { value: [], custom: '' }, idiomas: [], resistencias: '', imunidadesCondicao: { value: [], custom: '' }, notas: [],
+      sentidos: { value: [], custom: '' }, idiomas: [], idiomasCustom: '', resistencias: '',
+      resistenciasDano: { imunidade: [], vulnerabilidade: [], reducao: [] }, imunidadesCondicao: { value: [], custom: '' },
     };
     this.relatorio = []; // da última importação: [{ tipo: 'ok' | 'revisar' | 'ignorado', texto }]
     this.pronto = null; // { dados, criatura, ndFinal, opcoes }
@@ -155,7 +156,16 @@ export class DialogoConversor extends HandlebarsApplicationMixin(ApplicationV2) 
         indice: i, rotulo,
         opcoes: Object.entries(TESTES).map(([valor, nome]) => ({ valor, nome, selecionado: valor === e.ordem[i] })),
       })),
-      poderes: e.habilidades.map((h, indice) => ({ indice, nome: h.nome, texto: h.texto })),
+      poderes: e.habilidades.map((h, indice) => ({
+        indice, nome: h.nome, texto: h.texto,
+        temDano: Boolean(h.dano?.length),
+        ajustarDano: h.ajustarDano !== false, efeito: Boolean(h.efeito),
+        padrao: ['action', 'full'].includes(h.execucao), // só ação padrão ou completa usa o fator "com efeito"
+        danoTexto: (h.dano ?? []).map((d) => `${d.formula} (${NOMES_DANO[d.tipo]})`).join(' + '),
+        teste: h.resistencia ? `${NOME_DA_PERICIA[h.resistencia.pericia]}${h.resistencia.metade ? ' (metade)' : ''}` : '',
+        depois: null,
+        execucoes: EXECUCOES.map((v) => ({ valor: v, rotulo: t(`T20C5E.Exec.${v || 'nenhuma'}`), selecionado: v === (h.execucao ?? '') })),
+      })),
       modosAtaques: MODOS_ATAQUES.map((v) => ({ valor: v, rotulo: t(`T20C5E.ModoAtaques.${v}`), selecionado: v === e.modoAtaques })),
       importacao: this.relatorio.map((r) => ({ tipo: r.tipo, rotulo: t(`T20C5E.Rel.${r.tipo}`), texto: r.texto })),
       nds: [], erros: [], previa: null, aviso: null,
@@ -187,6 +197,15 @@ export class DialogoConversor extends HandlebarsApplicationMixin(ApplicationV2) 
       const idPorIndice = Object.fromEntries(itens.map((i) => [i.flags?.[ID_CONVERSOR]?.indiceAtaque, i._id]));
       const r = await p.api.simular(rascunho, opcoes);
       ctx.previa = this.#montarPrevia(r, p.criatura, idPorIndice);
+      // Os poderes do ator seguem a ordem dos poderes da criatura (os sem nome ficam de fora); a linha da tela
+      // é a posição entre os que têm nome.
+      const idsDosPoderes = itens.filter((i) => i.type === 'poder').map((i) => i._id);
+      let seguinte = 0;
+      e.habilidades.forEach((h, i) => {
+        if (!String(h.nome ?? '').trim()) return;
+        const previa = r.poderesPrevia?.find((x) => x.id === idsDosPoderes[seguinte++]);
+        ctx.poderes[i].depois = previa?.depois ?? null;
+      });
       this.pronto = { dados: p.dados, criatura: p.criatura, ndFinal: p.ndFinal, opcoes: p.opcoes };
     } catch (erro) {
       console.error(`${ID_CONVERSOR} |`, erro);
@@ -208,8 +227,10 @@ export class DialogoConversor extends HandlebarsApplicationMixin(ApplicationV2) 
     const armas = criatura.ataques.map((a, i) => {
       return { nome: a.nome, qtd: a.qtd, formula: r.plano.dano?.porArma?.[idPorIndice[i]]?.formula ?? '—' };
     });
+    const poderes = (r.poderesPrevia ?? []).filter((x) => x.depois)
+      .map(({ nome, antes, depois }) => ({ nome, antes, depois }));
     return {
-      linhas, armas, danoAlvo: r.plano.linha.Dano,
+      linhas, armas, poderes, danoAlvo: r.plano.linha.Dano,
       avisos: r.avisos, patamar: r.patamar, revisar: r.plano.revisar,
     };
   }
@@ -239,9 +260,13 @@ export class DialogoConversor extends HandlebarsApplicationMixin(ApplicationV2) 
     const ndEscolhido = valor('nd');
     if (ndEscolhido) e.nd = ndEscolhido;
     // As linhas na tela espelham o estado, então lista vazia na tela é lista vazia no estado.
-    e.habilidades = [...el.querySelectorAll('[data-poder]')].map((linha) => ({
+    const anterioresPoderes = e.habilidades;
+    e.habilidades = [...el.querySelectorAll('[data-poder]')].map((linha, i) => poderDaTela(anterioresPoderes[i], {
       nome: linha.querySelector('[data-campo-poder=nome]').value,
       texto: linha.querySelector('[data-campo-poder=texto]').value,
+      execucao: linha.querySelector('[data-campo-poder=execucao]').value,
+      ajustarDano: linha.querySelector('[data-campo-poder=ajustarDano]')?.checked,
+      efeito: linha.querySelector('[data-campo-poder=efeito]')?.checked,
     }));
     const linhas = [...el.querySelectorAll('[data-ataque]')];
     if (linhas.length) {
@@ -446,7 +471,7 @@ export class DialogoConversor extends HandlebarsApplicationMixin(ApplicationV2) 
 
   static async #addPoder() {
     this.#lerFormulario();
-    this.estado.habilidades.push({ nome: '', texto: '' });
+    this.estado.habilidades.push({ nome: '', texto: '', execucao: '' });
     await this.render();
   }
 

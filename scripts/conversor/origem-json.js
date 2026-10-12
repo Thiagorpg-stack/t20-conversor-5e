@@ -2,6 +2,7 @@
 // campos do formulário e um relatório do que foi importado, do que pede revisão e do que ficou de fora.
 import {
   modificadorAtributo, pesParaMetros, mapearTamanho, mapearTipo, mapearTipoDano, ndDeReferencia, parseCR, trocarDCporCD,
+  trocarTesteResistencia, periciaDoAtributo5e, ehAtributoPadraoDeVontade, NOME_DA_PERICIA,
 } from './mapeamentos.js';
 import { sugerirPapel } from './papel.js';
 
@@ -101,26 +102,100 @@ function lerSentidos(senses) {
   return { value, custom };
 }
 
-// Idiomas conhecidos viram chaves; o resto (e a telepatia) vai como nota para a biografia.
+// "120 ft." → "36 m" (as distâncias do T20 são em metros).
+const pesEmMetros = (texto) => String(texto ?? '').replace(/(\d+)\s*(?:ft\.?|feet|foot)/gi, (_, n) => `${pesParaMetros(n)} m`);
+
+// Idiomas conhecidos viram chaves; o resto (idiomas próprios e a telepatia) vai para o texto livre dos idiomas.
 function lerIdiomas(languages) {
   const todos = (languages?.value ?? []).map(semPrefixo);
   const idiomas = todos.filter((k) => IDIOMAS[k]).map((k) => IDIOMAS[k]);
-  const sobras = [
+  const telepatia = languages?.communication?.telepathy;
+  const custom = [
     ...todos.filter((k) => !IDIOMAS[k]),
-    languages?.custom,
-    languages?.communication?.telepathy?.value ? `telepatia ${languages.communication.telepathy.value} ${languages.communication.telepathy.units ?? 'ft'}` : null,
+    pesEmMetros(languages?.custom),
+    telepatia?.value ? `telepatia ${telepatia.units === 'm' ? telepatia.value : pesParaMetros(telepatia.value)} m` : null,
   ].filter(Boolean).join('; ');
-  return { idiomas, nota: sobras ? `Idiomas: ${sobras}` : null };
+  return { idiomas, custom };
 }
 
-// Resistências, imunidades e vulnerabilidades a dano viram uma linha de texto (a 5e reduz à metade; o T20 usa RD).
+const TIPOS_FISICOS = ['corte', 'impacto', 'perfuracao'];
+
+// Só tipos com equivalente exato viram chave do sistema; aproximações (trovejante, veneno...) ficariam erradas
+// como resistência de verdade (veneno → "dano" valeria para tudo) e ficam só no texto.
+const chavesDeDano = (traco) => (traco?.value ?? []).flatMap((tipo) => {
+  if (tipo === 'physical') return TIPOS_FISICOS;
+  const m = mapearTipoDano(tipo);
+  return m.revisar ? [] : [m.chave];
+});
+
+// Resistências, imunidades e vulnerabilidades a dano: o texto completo (para a ficha e para revisão) e as chaves
+// exatas (`reducao` é a resistência da 5e, que o T20 trata como RD por tipo; o valor sai do ND na criação do ator).
 function lerResistencias(traits) {
   const parte = (traco, rotulo) => {
     const tipos = (traco?.value ?? []).map(rotuloDano);
     const naoMagico = (traco?.bypasses ?? []).includes('mgc') ? ' (ataques não mágicos)' : '';
     return [tipos.length ? `${rotulo} ${tipos.join(', ')}${naoMagico}` : null, traco?.custom].filter(Boolean);
   };
-  return [...parte(traits?.di, 'imunidade a'), ...parte(traits?.dr, 'resistência a'), ...parte(traits?.dv, 'vulnerabilidade a')].join('; ');
+  const texto = [...parte(traits?.di, 'imunidade a'), ...parte(traits?.dr, 'resistência a'), ...parte(traits?.dv, 'vulnerabilidade a')].join('; ');
+  const dano = {
+    imunidade: chavesDeDano(traits?.di), vulnerabilidade: chavesDeDano(traits?.dv), reducao: chavesDeDano(traits?.dr),
+  };
+  const soTexto = ['di', 'dr', 'dv'].flatMap((k) => (traits?.[k]?.value ?? []).filter((tipo) => tipo !== 'physical' && mapearTipoDano(tipo).revisar));
+  return { texto, dano, soTexto };
+}
+
+// Tipo de ação do T20 (chaves de CONFIG.T20.abilityActivationTypes) a partir da ativação da 5e. '' = sem ativação (passivo).
+const EXECUCAO = { action: 'action', bonus: 'move', reaction: 'reaction', legendary: 'special', mythic: 'special', lair: 'special', special: 'special', minute: 'minute', hour: 'hour', day: 'day' };
+const execucaoDe = (item) => {
+  const ativacao = atividadesDe(item).map((a) => a.activation?.type).find(Boolean) ?? item.system?.activation?.type;
+  return EXECUCAO[ativacao] ?? '';
+};
+
+// Descrição da 5e em texto T20: sem HTML, "DC" vira "CD" e "Constitution Saving Throw" vira "Fortitude".
+const textoT20 = (html) => trocarDCporCD(trocarTesteResistencia(limparTexto5e(html)));
+
+const FORMULA_DANO = /^\d*d\d+(?:[+-]\d+)*$/;
+
+// Fórmula de dano do T20 ("3d8+3") ou null: tira as variáveis (@mod) e o que sobra de operador; o que não
+// vira dado e número fica de fora.
+function formulaDeDano(formula) {
+  const limpa = String(formula ?? '').replace(/@[\w.]+/g, '').replace(/\s+/g, '').replace(/^\++|[+\-*/]+$/g, '');
+  return FORMULA_DANO.test(limpa) ? limpa : null;
+}
+
+// dnd5e 4+: parte = { number, denomination, bonus, types[], custom }; antes: [fórmula, tipo].
+function parteDeDano(parte) {
+  if (Array.isArray(parte)) return { formula: formulaDeDano(parte[0]), original: parte[0], tipo: parte[1] };
+  const tipo = parte.types?.[0];
+  if (parte.custom?.enabled) return { formula: formulaDeDano(parte.custom.formula), original: parte.custom.formula, tipo };
+  if (!parte.number || !parte.denomination) return { formula: null, original: '', tipo };
+  const bonus = /^[+-]?\d+$/.test(String(parte.bonus ?? '').trim()) ? Number(parte.bonus) : 0;
+  return { formula: `${parte.number}d${parte.denomination}${bonus > 0 ? `+${bonus}` : bonus < 0 ? bonus : ''}`, tipo };
+}
+
+// Dano e teste de resistência de um poder (feat sem ataque). Sem dano numérico devolve null.
+// `efeito` é o padrão sugerido: teste de resistência, condição ou área; o mestre confere.
+function lerDanoPoder(item, htmlDescricao) {
+  const atividades = atividadesDe(item);
+  const comDano = atividades.find((a) => a.damage?.parts?.length);
+  const brutas = comDano ? comDano.damage.parts : (item.system?.damage?.parts ?? []);
+  const partes = brutas.map(parteDeDano);
+  const dano = partes.filter((p) => p.formula).map((p) => ({ formula: p.formula, tipo: mapearTipoDano(p.tipo ?? '').chave }));
+  const invalidas = partes.filter((p) => !p.formula && p.original).map((p) => p.original);
+  if (!dano.length) return { dano: null, invalidas };
+
+  const comTeste = atividades.find((a) => a.save?.ability?.[0]);
+  const atributo = comTeste ? comTeste.save.ability[0] : item.system?.save?.ability;
+  const pericia = periciaDoAtributo5e(atributo);
+  const onSave = comTeste?.damage?.onSave || comDano?.damage?.onSave;
+  const metade = onSave ? onSave === 'half' : /half (?:as much )?damage/i.test(limparTexto5e(htmlDescricao));
+  const condicaoOuArea = /&(?:amp;)?Reference\[condition=|\b(?:cone|sphere|cube|cylinder|emanation)\b/i.test(htmlDescricao ?? '');
+  return {
+    dano, invalidas,
+    resistencia: pericia ? { pericia, metade } : null,
+    assumidoVontade: pericia ? ehAtributoPadraoDeVontade(atributo) : false,
+    efeito: Boolean(pericia) || condicaoOuArea,
+  };
 }
 
 function lerCondicoes(ci) {
@@ -185,7 +260,7 @@ export function lerAtor5e(ator, { pvSoloNoND } = {}) {
       dano: dano.chave,
       qtd: qtdEncontrada ?? 1,
       qtd5e: qtdEncontrada ?? 1, // o mestre escolhe no diálogo se segue o multiataque da 5e ou não
-      descricao: trocarDCporCD(limparTexto5e(item.system?.description?.value)),
+      descricao: textoT20(item.system?.description?.value),
     };
     (dano.revisar ? revisar : ok)(`Ataque ${ataque.nome}: ${ataque.tipo === 'ad' ? 'à distância' : 'corpo a corpo'}, dano ${ataque.dano}${dano.revisar ? ' (aproximação)' : ''}, ×${ataque.qtd}`);
     return ataque;
@@ -206,8 +281,20 @@ export function lerAtor5e(ator, { pvSoloNoND } = {}) {
   revisar(`Papel sugerido: ${sugestao.papel} (${MOTIVOS_PAPEL[sugestao.motivo]})${sugestao.chefeFinalSugerido ? '; Chefe Final marcado' : ''}.`);
 
   // habilidades (inclusive o Multiataque) viram poderes só com o texto; contam para os poderes do patamar no Ajustar ND
-  const habilidades = itens.filter((i) => i.type === 'feat' && i.name && !ehAtaque(i))
-    .map((i) => ({ nome: i.name, texto: trocarDCporCD(limparTexto5e(i.system?.description?.value)) }));
+  const habilidades = itens.filter((i) => i.type === 'feat' && i.name && !ehAtaque(i)).map((i) => {
+    const habilidade = { nome: i.name, texto: textoT20(i.system?.description?.value), execucao: execucaoDe(i) };
+    const poder = lerDanoPoder(i, i.system?.description?.value);
+    if (poder.invalidas.length) revisar(`Poder ${i.name}: dano sem fórmula numérica (${poder.invalidas.join(', ')}); ajuste o dano à mão.`);
+    if (!poder.dano) return habilidade;
+    ok(`Poder ${i.name}: dano ${poder.dano.map((d) => `${d.formula} ${d.tipo}`).join(' + ')}, `
+      + `${poder.resistencia ? `${NOME_DA_PERICIA[poder.resistencia.pericia]}${poder.resistencia.metade ? ' (metade)' : ''}` : 'sem teste'}, `
+      + `${poder.efeito ? 'com' : 'sem'} efeito`);
+    if (poder.assumidoVontade) revisar(`Poder ${i.name}: teste de Carisma ou Inteligência virou Vontade (padrão assumido).`);
+    return {
+      ...habilidade, dano: poder.dano, ...(poder.resistencia && { resistencia: poder.resistencia }),
+      efeito: poder.efeito, ajustarDano: true,
+    };
+  });
   if (habilidades.length) revisar(`${habilidades.length} habilidade(s) viram poderes só com o texto: ${habilidades.map((h) => h.nome).join(', ')}.`);
 
   // sentidos, idiomas, resistências e imunidades a condição
@@ -215,11 +302,17 @@ export function lerAtor5e(ator, { pvSoloNoND } = {}) {
   const sentidos = lerSentidos(s.attributes?.senses);
   if (sentidos.value.length) ok(`Sentidos: ${sentidos.value.join(', ')}`);
   if (sentidos.custom) revisar(`Sentidos sem equivalente (texto em Sentidos): ${sentidos.custom}.`);
-  const { idiomas, nota } = lerIdiomas(traits.languages);
+  const { idiomas, custom: idiomasCustom } = lerIdiomas(traits.languages);
   if (idiomas.length) ok(`Idiomas: ${idiomas.join(', ')}`);
-  if (nota) revisar(`${nota} (vai para a biografia).`);
-  const resistencias = lerResistencias(traits);
-  if (resistencias) revisar(`Resistências em texto (converta em RD se quiser): ${resistencias}.`);
+  if (idiomasCustom) revisar(`Idiomas sem equivalente (texto em Idiomas): ${idiomasCustom}.`);
+  const { texto: resistencias, dano: resistenciasDano, soTexto } = lerResistencias(traits);
+  const estruturadas = [
+    resistenciasDano.imunidade.length ? `imunidade a ${resistenciasDano.imunidade.join(', ')}` : '',
+    resistenciasDano.vulnerabilidade.length ? `vulnerabilidade a ${resistenciasDano.vulnerabilidade.join(', ')}` : '',
+    resistenciasDano.reducao.length ? `RD por tipo (valor pelo patamar do ND) em ${resistenciasDano.reducao.join(', ')}` : '',
+  ].filter(Boolean);
+  if (estruturadas.length) ok(`Resistências na ficha: ${estruturadas.join('; ')}`);
+  if (resistencias) revisar(`Resistências 5e (texto em Resistências; a 5e reduz à metade, o T20 usa RD): ${resistencias}${soTexto.length ? `. Só no texto, sem equivalente exato: ${soTexto.join(', ')}` : ''}.`);
   const imunidadesCondicao = lerCondicoes(traits.ci);
   if (imunidadesCondicao.value.length) ok(`Imunidade a condições: ${imunidadesCondicao.value.join(', ')}`);
   if (imunidadesCondicao.custom) revisar(`Condições sem equivalente (texto em Imunidades): ${imunidadesCondicao.custom}.`);
@@ -245,7 +338,7 @@ export function lerAtor5e(ator, { pvSoloNoND } = {}) {
     estado: {
       nome: ator.name ?? '', cr, tamanho: tamanho.codigo, tipo: tipo.codigo, deslocamento, atributos,
       ataques, modoAtaques: '5e', habilidades, papel: sugestao.papel, chefeFinal: sugestao.chefeFinalSugerido,
-      sentidos, idiomas, resistencias, imunidadesCondicao, notas: nota ? [nota] : [],
+      sentidos, idiomas, idiomasCustom, resistencias, resistenciasDano, imunidadesCondicao,
     },
     relatorio,
   };

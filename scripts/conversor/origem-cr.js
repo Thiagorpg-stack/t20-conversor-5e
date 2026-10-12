@@ -14,6 +14,13 @@ const inteiro = (valor, padrao = 0) => {
 
 export const MODOS_ATAQUES = ['5e', 't20', 'limite', 'manual'];
 
+// Tipos de ação de um poder (chaves de CONFIG.T20.abilityActivationTypes); '' = sem ativação (passivo).
+export const EXECUCOES = ['', 'action', 'move', 'full', 'reaction', 'free', 'special'];
+
+// Perícias do teste de resistência de um poder (o alvo rola contra a CD) e fórmula de dano aceita ("3d8+3").
+export const PERICIAS_RESISTENCIA = ['atle', 'refl', 'fort', 'vont'];
+const FORMULA_DANO = /^\d*d\d+(?:[+-]\d+)*$/;
+
 const quantidade = (a) => Math.max(1, inteiro(a.qtd, 1));
 
 // Quantidade de ataques por rodada, à escolha do mestre. A 5e dá multiataque a quase toda criatura de CR 2+;
@@ -82,7 +89,23 @@ export function criaturaDeFormulario(f) {
   });
 
   const habilidades = (f.habilidades ?? [])
-    .map((h) => ({ nome: String(h.nome ?? '').trim(), texto: String(h.texto ?? '').trim() }))
+    .map((h) => {
+      const habilidade = {
+        nome: String(h.nome ?? '').trim(), texto: String(h.texto ?? '').trim(),
+        execucao: EXECUCOES.includes(h.execucao) ? h.execucao : '',
+      };
+      const dano = (h.dano ?? [])
+        .map((d) => ({ formula: String(d.formula ?? '').replace(/\s+/g, ''), tipo: CHAVES_DANO.includes(d.tipo) ? d.tipo : 'dano' }))
+        .filter((d) => FORMULA_DANO.test(d.formula));
+      if (!dano.length) return habilidade;
+      return {
+        ...habilidade, dano,
+        ...(PERICIAS_RESISTENCIA.includes(h.resistencia?.pericia) && {
+          resistencia: { pericia: h.resistencia.pericia, metade: Boolean(h.resistencia.metade) },
+        }),
+        efeito: Boolean(h.efeito), ajustarDano: h.ajustarDano !== false,
+      };
+    })
     .filter((h) => h.nome);
 
   if (erros.length) return { ok: false, erros };
@@ -106,10 +129,22 @@ export function criaturaDeFormulario(f) {
       habilidades,
       sentidos: { value: lista(f.sentidos?.value), custom: String(f.sentidos?.custom ?? '').trim() },
       idiomas: lista(f.idiomas),
+      idiomasCustom: String(f.idiomasCustom ?? '').trim(),
       resistencias: String(f.resistencias ?? '').trim(),
+      resistenciasDano: {
+        imunidade: lista(f.resistenciasDano?.imunidade),
+        vulnerabilidade: lista(f.resistenciasDano?.vulnerabilidade),
+        reducao: lista(f.resistenciasDano?.reducao),
+      },
       imunidadesCondicao: { value: lista(f.imunidadesCondicao?.value), custom: String(f.imunidadesCondicao?.custom ?? '').trim() },
-      notas: lista(f.notas),
       chefeFinal: Boolean(f.chefeFinal),
     },
   };
+}
+
+// Poder lido da tela: nome, texto, ação e as caixas editam o que já havia; o dano e o teste vindos da importação
+// não têm campo na tela e continuam como estavam. Poder sem dano não tem as caixas.
+export function poderDaTela(anterior, { nome, texto, execucao, ajustarDano, efeito }) {
+  const base = { ...anterior, nome, texto, execucao };
+  return anterior?.dano?.length ? { ...base, ajustarDano, efeito } : base;
 }

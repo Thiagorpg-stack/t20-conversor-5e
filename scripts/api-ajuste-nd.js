@@ -1,6 +1,6 @@
-// Acesso à API do módulo Ajustar ND (tormenta20-ajuste-nd), versão 0.9.0 ou mais recente.
+// Acesso à API do módulo Ajustar ND (tormenta20-ajuste-nd), versão 0.10.0 ou mais recente.
 export const ID_AJUSTE_ND = 'tormenta20-ajuste-nd';
-export const VERSAO_API_MINIMA = 1;
+export const VERSAO_API_MINIMA = 2;
 
 // Devolve a API ou lança um Error com a chave de texto do problema (T20C5E.*).
 export function obterApi() {

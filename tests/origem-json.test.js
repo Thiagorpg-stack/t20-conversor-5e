@@ -58,7 +58,10 @@ test('lerAtor5e: preenche o formulário e classifica o que importou, o que pede 
   assert.equal(e.deslocamento, 9);
   assert.deepEqual(e.atributos, { for: -1, des: 4, con: 0, int: 0, sab: 1, car: 0 });
   assert.deepEqual(e.ataques, [{ nome: 'Shortbow', tipo: 'ad', dano: 'impacto', qtd: 2, qtd5e: 2, descricao: 'CD 12 test' }]);
-  assert.deepEqual(e.habilidades, [{ nome: 'Nimble Escape', texto: 'Foge.' }, { nome: 'Multiattack', texto: 'makes two Shortbow attacks' }]);
+  assert.deepEqual(e.habilidades, [
+    { nome: 'Nimble Escape', texto: 'Foge.', execucao: '' },
+    { nome: 'Multiattack', texto: 'makes two Shortbow attacks', execucao: '' },
+  ]);
   assert.equal(e.papel, 'lacaio');                                             // 20 PV < metade de 100
   assert.equal(e.chefeFinal, false);
   assert.ok(r.relatorio.some((l) => l.tipo === 'revisar' && /impacto \(aproxima/.test(l.texto)));
@@ -103,9 +106,34 @@ test('lerAtor5e: sentidos, idiomas, resistências e imunidades a condição', ()
   const e = r.estado;
   assert.deepEqual(e.sentidos, { value: ['escuro', 'cegas'], custom: 'tremorsense 30 pés; só na água' });
   assert.deepEqual(e.idiomas, ['comum', 'draconico']);
-  assert.deepEqual(e.notas, ['Idiomas: deep; telepatia 60 ft']);
+  assert.equal(e.idiomasCustom, 'deep; telepatia 18 m');   // 60 pés = 18 m
   assert.equal(e.resistencias, 'imunidade a fogo; resistência a impacto, perfuração, corte (ataques não mágicos); vulnerabilidade a frio, thunder');
+  // só tipos com equivalente exato viram chave; thunder (aproximação) fica só no texto
+  assert.deepEqual(e.resistenciasDano, { imunidade: ['fogo'], vulnerabilidade: ['frio'], reducao: ['impacto', 'perfuracao', 'corte'] });
+  const linha = r.relatorio.map((l) => l.texto).join('\n');
+  assert.match(linha, /Resistências na ficha: imunidade a fogo; vulnerabilidade a frio; RD por tipo/);
+  assert.match(linha, /Só no texto, sem equivalente exato: thunder/);
   assert.deepEqual(e.imunidadesCondicao, { value: ['envenenado'], custom: 'incapacitated' });
+});
+
+test('lerAtor5e: tipo de ação do poder vem da ativação da 5e', () => {
+  const feat = (nome, tipo) => ({ type: 'feat', name: nome, system: { activities: tipo ? { a: { type: 'utility', activation: { type: tipo } } } : {} } });
+  const ator = ator5e();
+  ator.items = ['action', 'bonus', 'reaction', 'legendary', 'lair', ''].map((t) => feat(`P-${t || 'passivo'}`, t));
+  ator.items.push({ type: 'feat', name: 'Antigo', system: { activation: { type: 'bonus' } } }); // dnd5e 3.x: ativação no próprio item
+  const r = lerAtor5e(ator);
+  assert.deepEqual(r.estado.habilidades.map((h) => [h.nome, h.execucao]), [
+    ['P-action', 'action'], ['P-bonus', 'move'], ['P-reaction', 'reaction'], ['P-legendary', 'special'],
+    ['P-lair', 'special'], ['P-passivo', ''], ['Antigo', 'move'],
+  ]);
+});
+
+test('lerAtor5e: resistência física vira os três tipos; sem resistências nada é marcado', () => {
+  const r = lerAtor5e(ator5e({ system: { traits: { size: 'med', dr: { value: ['physical'], bypasses: [] } } } }));
+  assert.deepEqual(r.estado.resistenciasDano.reducao, ['corte', 'impacto', 'perfuracao']);
+  const nada = lerAtor5e(ator5e());
+  assert.deepEqual(nada.estado.resistenciasDano, { imunidade: [], vulnerabilidade: [], reducao: [] });
+  assert.equal(nada.estado.idiomasCustom, '');
 });
 
 test('lerAtor5e: dnd5e antigo guarda os sentidos direto em senses', () => {
@@ -148,7 +176,8 @@ test('Otyugh real: o que o importador acerta', { skip: !existsSync(arquivoOtyugh
   assert.doesNotMatch(JSON.stringify(e), /ve-rd|\[\[|&Reference/);
   assert.deepEqual(e.sentidos, { value: ['escuro'], custom: '' });
   assert.deepEqual(e.idiomas, []);
-  assert.match(e.notas[0], /^Idiomas: Otyugh; telepathy 120 ft/);
+  assert.match(e.idiomasCustom, /^Otyugh; telepathy 36 m \(doesn't allow/); // 120 pés = 36 m
+  assert.deepEqual(e.habilidades.map((h) => h.execucao), ['action', 'action']); // Multiattack e Tentacle Slam são ações
   assert.deepEqual(r.imagens, {
     img: 'https://cdn.5e.tools/2024/img/bestiary/XMM/Otyugh.webp',
     token: 'assets/srd5e/img/bestiary/tokens/XMM/Otyugh.webp',

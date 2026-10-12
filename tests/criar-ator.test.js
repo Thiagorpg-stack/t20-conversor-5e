@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { criaturaDeFormulario, aplicarModoAtaques } from '../scripts/conversor/origem-cr.js';
-import { montarDadosAtor, ataquesPorArmaDe, ID_CONVERSOR } from '../scripts/conversor/criar-ator.js';
+import { montarDadosAtor, ataquesPorArmaDe, rdDoND, ID_CONVERSOR } from '../scripts/conversor/criar-ator.js';
 import { CODIGOS_TAMANHO, CODIGOS_TIPO, CHAVES_DANO, mapearTamanho, mapearTipo, mapearTipoDano } from '../scripts/conversor/mapeamentos.js';
 
 const formulario = (extra = {}) => ({
@@ -109,7 +109,7 @@ test('modo de ataques: 5e, um por ataque, até o limite do ND ou manual', () => 
   assert.deepEqual(ataques.map((a) => a.qtd), [1, 2, 3]); // não altera a lista original
 });
 
-test('linha de ataques, sentidos, idiomas, resistências e notas vão para a ficha', () => {
+test('linha de ataques, sentidos, idiomas, resistências e imunidades vão para a ficha', () => {
   const { criatura } = criaturaDeFormulario(formulario({
     ataques: [
       { nome: 'Mordida', tipo: 'cac', dano: 'perfuracao', qtd: 1 },
@@ -117,18 +117,57 @@ test('linha de ataques, sentidos, idiomas, resistências e notas vão para a fic
       { nome: 'Cuspe', tipo: 'ad', dano: 'acido', qtd: 1 },
     ],
     sentidos: { value: ['escuro'], custom: 'tremorsense 30 pés' }, idiomas: ['comum'],
-    resistencias: 'imunidade a fogo', imunidadesCondicao: { value: ['envenenado'], custom: '' }, notas: ['Idiomas: telepatia 60 ft'],
+    resistencias: 'imunidade a fogo', imunidadesCondicao: { value: ['envenenado'], custom: '' }, idiomasCustom: 'Otyugh; telepatia 36 m',
   }));
   const d = montarDadosAtor(criatura, { nd: '3', gerarId });
   assert.equal(d.system.detalhes.ataquescac, 'Mordida +0 (1d6) e 2 Garra +0 (1d6 de fogo).');
   assert.equal(d.system.detalhes.ataquesad, 'Cuspe +0 (1d6 de ácido).');
   assert.deepEqual(d.system.attributes.sentidos, { value: ['escuro'], custom: 'tremorsense 30 pés' });
-  assert.deepEqual(d.system.tracos.idiomas.value, ['comum']);
+  assert.deepEqual(d.system.tracos.idiomas, { value: ['comum'], custom: 'Otyugh; telepatia 36 m' });
   assert.deepEqual(d.system.tracos.ic, { value: ['envenenado'], custom: '' });
   assert.equal(d.system.detalhes.resistencias, 'imunidade a fogo');
-  assert.equal(d.system.detalhes.biography.value, '<p>Caçador &lt;rápido&gt;</p><p>Idiomas: telepatia 60 ft</p>');
+  assert.equal(d.system.detalhes.biography.value, '<p>Caçador &lt;rápido&gt;</p>');
   const semAtaques = montarDadosAtor(criaturaDeFormulario(formulario({ ataques: [] })).criatura, { nd: '3', gerarId });
   assert.equal(semAtaques.system.detalhes.ataquescac, '');
+});
+
+test('RD por patamar do ND: 5, 10, 15 e 20', () => {
+  const casos = { '1/4': 5, 4: 5, 5: 10, 10: 10, 11: 15, 16: 15, 17: 20, S: 20 };
+  for (const [nd, rd] of Object.entries(casos)) assert.equal(rdDoND(nd), rd, `ND ${nd}`);
+});
+
+test('resistências a dano: imunidade, vulnerabilidade e RD por tipo (valor pelo ND)', () => {
+  const { criatura } = criaturaDeFormulario(formulario({
+    resistenciasDano: { imunidade: ['fogo'], vulnerabilidade: ['frio'], reducao: ['corte', 'impacto'] },
+  }));
+  const d = montarDadosAtor(criatura, { nd: '12', gerarId });
+  const r = d.system.tracos.resistencias;
+  assert.equal(r.fogo.imunidade, true);
+  assert.equal(r.frio.vulnerabilidade, true);
+  assert.deepEqual([r.corte.base, r.impacto.base, r.perfuracao.base], [15, 15, 0]); // ND 12 = Campeão = RD 15
+  assert.equal(r.dano.base, 0);                                                      // RD geral fica para o Ajustar ND (Chefe Final)
+  assert.equal(r.fogo.base, 0);
+  const sem = montarDadosAtor(criaturaDeFormulario(formulario()).criatura, { nd: '12', gerarId });
+  assert.equal(sem.system.tracos.resistencias.fogo.imunidade, false);                // sem resistências: nada marcado
+});
+
+test('token nasce com nome (dono passa o mouse) e barra de vida (dono), como no original', () => {
+  const d = montarDadosAtor(criaturaDeFormulario(formulario()).criatura, { nd: '3', gerarId });
+  assert.equal(d.prototypeToken.displayName, 20);
+  assert.equal(d.prototypeToken.displayBars, 40);
+  assert.equal(d.prototypeToken.bar1.attribute, 'attributes.pv');
+});
+
+test('poder leva o tipo de ação escolhido; tipo inválido vira passivo', () => {
+  const { criatura } = criaturaDeFormulario(formulario({
+    habilidades: [
+      { nome: 'Pancada', texto: 'x', execucao: 'action' }, { nome: 'Fuga', texto: 'y', execucao: 'move' },
+      { nome: 'Passivo', texto: 'z', execucao: '' }, { nome: 'Estranho', texto: 'w', execucao: 'voar' }, { nome: 'Sem campo', texto: 'v' },
+    ],
+  }));
+  const d = montarDadosAtor(criatura, { nd: '3', gerarId });
+  const poderes = d.items.filter((i) => i.type === 'poder');
+  assert.deepEqual(poderes.map((p) => p.system.ativacao.execucao), ['action', 'move', '', '', '']);
 });
 
 test('imagem: retrato e token escolhidos; sem token, o token usa o retrato; sem nada, ficam os ícones do modelo', () => {

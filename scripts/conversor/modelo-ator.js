@@ -135,8 +135,9 @@ export function criarActorTemplate() {
   };
 }
 
-// Poder só com texto (formato das fichas oficiais, sem rolagens): o mestre revisa e liga as rolagens à mão.
-export function criarItemPoder({ nome, descricao = '' }) {
+// Poder no formato das fichas oficiais. Sem `dano` ele só tem texto e o mestre liga as rolagens à mão; com `dano`
+// ([{ formula, tipo }]) leva uma rolagem de dano real, e `resistenciaTxt` ("Reflexos Metade") vai no teste de resistência.
+export function criarItemPoder({ nome, descricao = '', execucao = '', dano = [], resistenciaTxt = '' }) {
   return {
     name: nome,
     type: 'poder',
@@ -144,12 +145,14 @@ export function criarItemPoder({ nome, descricao = '' }) {
     system: {
       description: { value: descricao, unidentified: '' },
       source: '',
-      ativacao: { execucao: '', custo: 0, qtd: '', condicao: '', special: '' },
+      ativacao: { execucao, custo: 0, qtd: '', condicao: '', special: '' },
       duracao: { value: 0, units: 'inst', special: '' },
       range: { value: null, units: '' },
       efeito: '', alcance: 'none', area: '',
-      resistencia: { pericia: '', atributo: '', bonus: 0, txt: '' },
-      rolls: [],
+      resistencia: { pericia: '', atributo: '', bonus: 0, txt: resistenciaTxt },
+      rolls: dano.length
+        ? [{ name: 'Dano', key: 'dano0', type: 'dano', parts: dano.map((d) => [d.formula, d.tipo, '']), versatil: '', adaptavel: '' }]
+        : [],
       tipo: 'ability', subtipo: '',
       origin: '', tags: [], chatFlavor: '', chatGif: '', rolltags: [], automationtags: [],
     },
