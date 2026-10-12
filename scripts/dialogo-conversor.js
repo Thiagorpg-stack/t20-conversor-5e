@@ -504,14 +504,15 @@ export class DialogoConversor extends HandlebarsApplicationMixin(ApplicationV2) 
     await this.close();
   }
 
-  // O sistema pode criar as perícias de um NPC todas com Força; volta cada uma ao atributo da regra (Fortitude = Constituição...).
+  // Atributo de cada perícia = o da regra (Fortitude = Constituição...). Grava o system.pericias inteiro: o sistema Tormenta20
+  // preenche com os valores padrão (atributo "for", outros 0) o que falta numa perícia atualizada por caminho parcial.
   async #normalizarPericias(ator) {
-    const mudancas = {};
+    const pericias = ator.toObject().system.pericias;
+    let mudou = false;
     for (const [chave, regra] of Object.entries(CONFIG.T20.pericias)) {
-      const pericia = ator.system.pericias?.[chave];
-      if (pericia && regra.abl && pericia.atributo !== regra.abl) mudancas[`system.pericias.${chave}.atributo`] = regra.abl;
+      if (pericias[chave] && regra.abl && pericias[chave].atributo !== regra.abl) { pericias[chave].atributo = regra.abl; mudou = true; }
     }
-    if (Object.keys(mudancas).length) await ator.update(mudancas);
+    if (mudou) await ator.update({ 'system.pericias': pericias });
   }
 
   static async #criar() {
@@ -544,8 +545,8 @@ export class DialogoConversor extends HandlebarsApplicationMixin(ApplicationV2) 
           ...opcoes, ataquesPorArma: ataquesPorArmaDe(ator.toObject().items, criatura),
         });
         await api.aplicarAjuste(ator, resultado, { copiar: false });
-        console.info(`${ID_CONVERSOR} | perícias após a passada ${passada + 1}`, Object.fromEntries(
-          ['luta', 'fort', 'refl', 'vont'].map((k) => [k, { ...ator.system.pericias[k] }])));
+        console.info(`${ID_CONVERSOR} | perícias após a passada ${passada + 1}: ${['luta', 'fort', 'refl', 'vont']
+          .map((k) => `${k}=${ator.system.pericias[k].atributo}/outros ${ator.system.pericias[k].outros}/total ${ator.system.pericias[k].value}`).join('; ')}`);
       }
     } catch (erro) {
       console.error(`${ID_CONVERSOR} |`, erro);

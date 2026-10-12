@@ -2,7 +2,8 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { existsSync, readFileSync } from 'node:fs';
 import { lerAtor5e, limparTexto5e, quantidadeNoMultiataque } from '../scripts/conversor/origem-json.js';
-import { termosT20 } from '../scripts/conversor/mapeamentos.js';
+import { completarPericiasParciais } from '../scripts/conversor/pericias.js';
+import { termosT20, condicoesT20 } from '../scripts/conversor/mapeamentos.js';
 import { mediaFormula, formulaDeMedia, aplicarProporcaoExtras } from '../scripts/conversor/dano.js';
 import { criaturaDeFormulario } from '../scripts/conversor/origem-cr.js';
 import { montarDadosAtor } from '../scripts/conversor/criar-ator.js';
@@ -205,7 +206,7 @@ test('lerAtor5e: magias por nome, voo e usos/recarga dos poderes (dragão)', () 
   const texto = (n) => e.habilidades.find((h) => h.nome === n).texto;
   assert.equal(texto('Spellcasting'), 'Shatter');
   assert.equal(texto('Legendary Resistance'), '(3/dia) Succeeds.');
-  assert.equal(texto('Breath'), '(Recarga: ação de movimento) Sopro.');
+  assert.equal(texto('Breath'), '(Recarga (movimento)) Sopro.');
   assert.deepEqual(e.deslocamentosExtra, { fly: 24, burrow: 9 });
 
   const { criatura } = criaturaDeFormulario({ ...e, ritmo: 't20', nd: '1' });
@@ -223,11 +224,12 @@ test('Dragão azul real: magias, voo, usos e recarga', { skip: !existsSync(arqui
   assert.match(texto('Spellcasting'), /At will: Detect Magic, Invisibility, Mage Hand, Shatter/);
   assert.match(texto('Spellcasting'), /1\/day each: Scrying, Sending/);
   assert.match(texto('Legendary Resistance'), /^\(3\/dia\) /);
-  assert.match(texto('Lightning Breath'), /^\(Recarga: ação de movimento\) /);
+  assert.match(texto('Lightning Breath'), /^\(Recarga \(movimento\)\) /);
   assert.deepEqual(e.deslocamentosExtra, { fly: 24, burrow: 9 });
   assert.deepEqual(e.ataques[0].danoExtra, [{ formula: '1d10', tipo: 'eletricidade' }]);
   assert.equal(e.ataques[0].proporcaoExtra, 0.256); // 2d8+7 (16) e 1d10 (5,5): 5,5 / 21,5
   assert.doesNotMatch(texto('Lightning Breath'), /\[Area/);
+  assert.equal(e.habilidades.find((h) => h.nome === 'Lightning Breath').area, 'linha 27m x 1,5m');
   assert.match(texto('Lightning Breath'), /linha de 27 m de comprimento e 1,5 m de largura/);
   assert.match(texto('Regional Effects'), /Reflexos CD 15/);
   assert.equal(e.conjurador, true);
@@ -285,11 +287,12 @@ test('termosT20: áreas em metros e alcances curto, médio e longo', () => {
   assert.equal(termosT20('a 30-foot Cone, a 20-foot-radius Sphere, a 15-foot Cube, a 10-foot Emanation'),
     'a cone de 9 m, a esfera de 6 m de raio, a cubo de 4,5 m de lado, a emanação de 3 m');
   assert.equal(termosT20('within 30 feet, range 90 ft, 120 ft away, reach 10 ft'), 'within alcance curto, range alcance médio, alcance longo away, reach 3 m');
+  assert.equal(termosT20('reach 5 ft. or range 150 ft. Hit: 27 (4d10) damage, within 30 ft.'), 'reach 1,5 m or range alcance longo. Hit: 27 (4d10) damage, within alcance curto.');
   assert.equal(termosT20('fall 2d4 × 10 feet into the sinkhole'), 'fall 2d4 × 10 feet into the sinkhole'); // distância de queda não é alcance
   assert.equal(termosT20('In a Cone or a Line of Sight'), 'In a cone or a Line of Sight');
 });
 
-test('conjurador: PM = 5 × ND e atributo de conjuração; poder com usos vira contador consumido pelo poder', () => {
+test('conjurador: PM = 5 × ND e atributo de conjuração; poder com usos vira contador de recurso', () => {
   const e = { ...lerAtor5e(ator5e({ system: { attributes: { movement: { walk: 30, units: 'ft' }, hp: { max: 20 }, spellcasting: 'wis' } } })).estado };
   assert.equal(e.conjurador, true);
   assert.equal(e.conjuracao, 'sab');
@@ -299,5 +302,45 @@ test('conjurador: PM = 5 × ND e atributo de conjuração; poder com usos vira c
   assert.equal(dados.system.attributes.pm.value, 20);
   assert.equal(dados.system.attributes.conjuracao, 'sab');
   assert.deepEqual(dados.system.resources.primary, { value: 3, max: 3, label: 'Resist' });
-  assert.deepEqual(dados.items.find((i) => i.name === 'Resist').system.consume, { amount: 1, mpMultiplier: false, target: 'primary', type: 'attribute' });
+});
+
+test('completarPericiasParciais: atualização parcial de perícia leva os valores atuais da perícia', () => {
+  const atuais = { fort: { atributo: 'con', treinado: false, outros: 16, bonus: ['1'] }, luta: { atributo: 'for', outros: 31 } };
+  const achatada = completarPericiasParciais(atuais, { 'system.pericias.fort.treinado': true, 'system.attributes.pv.value': 5 });
+  assert.deepEqual(achatada, {
+    'system.pericias.fort.treinado': true, 'system.attributes.pv.value': 5,
+    'system.pericias.fort.atributo': 'con', 'system.pericias.fort.outros': 16, 'system.pericias.fort.bonus': ['1'],
+  });
+  const aninhada = completarPericiasParciais(atuais, { system: { pericias: { fort: { outros: 2 }, luta: { atributo: 'des' } } } });
+  assert.deepEqual(aninhada.system.pericias.fort, { atributo: 'con', treinado: false, bonus: ['1'], outros: 2 });
+  assert.deepEqual(aninhada.system.pericias.luta, { outros: 31, atributo: 'des' });
+  assert.deepEqual(completarPericiasParciais(atuais, { name: 'X' }), { name: 'X' });
+  assert.equal(completarPericiasParciais(undefined, { a: 1 }).a, 1);
+});
+
+test('poderes oficiais: Spellcasting vira "Magias" passivo; vantagem contra magia vira Resistência a Magia +2/+5 por patamar', () => {
+  const ator = ator5e({});
+  ator.items.push(
+    { type: 'feat', name: 'Spellcasting', system: { identifier: 'spellcasting', description: { value: '<p>Casts spells.</p>' } } },
+    { type: 'feat', name: 'Magic Resistance', system: { description: { value: '<p>Advantage on saving throws against spells and other magical effects.</p>' } } },
+  );
+  ator.items.push({ type: 'feat', name: 'Misty Step', system: { uses: { max: '3', recovery: [{ period: 'day' }] }, description: { value: '<p>Misty Step (3/Day). Casts.</p>' } } });
+  const e = lerAtor5e(ator).estado;
+  assert.deepEqual(e.habilidades.filter((h) => h.oficial).map((h) => [h.nome, h.oficial]), [['Spellcasting', 'magias'], ['Magic Resistance', 'resistenciaMagia']]);
+  const monta = (nd) => montarDadosAtor(criaturaDeFormulario({ ...e, ritmo: 't20', nd }).criatura, { nd, gerarId: () => 'id' }).items;
+  assert.equal(e.habilidades.find((h) => h.nome === 'Misty Step').texto, 'Misty Step (3/Day). Casts.');
+  const magias = monta('4').find((i) => i.name === 'Magias');
+  assert.equal(magias.system.tipo, 'racial');
+  assert.equal(magias.system.ativacao.execucao, 'passive');
+  assert.equal(magias.img, 'systems/tormenta20/icons/poderes/ameacas/magias.webp');
+  assert.equal(magias.system.description.value, '<p>Casts spells.</p>');
+  const resistencia = (nd) => monta(nd).find((i) => i.name === 'Resistência a Magia');
+  assert.equal(resistencia('4').effects[0].system.changes[0].value, 2);
+  assert.equal(resistencia('12').effects[0].system.changes[0].value, 5);
+  assert.match(resistencia('12').system.description.value, /resistência a magia \+5/);
+  assert.equal(resistencia('12').effects[0].flags.tormenta20.items, 'Fortitude;Reflexos;Vontade');
+});
+
+test('condicoesT20: nomes das condições da 5e em texto livre viram os do T20', () => {
+  assert.equal(condicoesT20('charmed (with Mind Blank); Poisoned, prone'), 'enfeitiçado (with Mind Blank); Envenenado, caído'.replace('Envenenado', 'envenenado'));
 });

@@ -101,6 +101,8 @@ export function criaturaDeFormulario(f) {
       const habilidade = {
         nome: String(h.nome ?? '').trim(), texto: String(h.texto ?? '').trim(),
         execucao: EXECUCOES.includes(h.execucao) ? h.execucao : '',
+        ...(String(h.area ?? '').trim() && { area: String(h.area).trim() }),
+        ...(['magias', 'resistenciaMagia'].includes(h.oficial) && { oficial: h.oficial }),
         ...(Number(h.usos) >= 1 && { usos: Math.min(99, Math.floor(Number(h.usos))) }),
       };
       const dano = (h.dano ?? [])

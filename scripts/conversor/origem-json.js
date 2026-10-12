@@ -2,7 +2,7 @@
 // campos do formulário e um relatório do que foi importado, do que pede revisão e do que ficou de fora.
 import {
   modificadorAtributo, pesParaMetros, mapearTamanho, mapearTipo, mapearTipoDano, ndDeReferencia, parseCR, trocarDCporCD,
-  trocarTesteResistencia, termosT20, periciaDoAtributo5e, ehAtributoPadraoDeVontade, NOME_DA_PERICIA,
+  trocarTesteResistencia, termosT20, condicoesT20, areaT20, periciaDoAtributo5e, ehAtributoPadraoDeVontade, NOME_DA_PERICIA,
 } from './mapeamentos.js';
 import { sugerirPapel } from './papel.js';
 import { mediaFormula } from './dano.js';
@@ -179,7 +179,7 @@ const textoT20 = (html, nomesPorId) => termosT20(trocarDCporCD(trocarTesteResist
 
 const PERIODOS = { day: 'dia', lr: 'descanso longo', sr: 'descanso curto', dawn: 'amanhecer', dusk: 'anoitecer' };
 
-// Usos limitados ("3/dia") ou recarga ("Recarga: ação de movimento") do item: a 5e guarda em `uses`/`recharge`, fora do
+// Usos limitados ("3/dia") ou recarga ("Recarga (movimento)", como nos poderes oficiais) do item: a 5e guarda em `uses`/`recharge`, fora do
 // texto. `max` > 0 só nos usos limitados: viram um contador de recurso da ficha. A resistência lendária não tem `uses`:
 // consome `resources.legres`, cujo máximo são os usos por dia.
 function usosDe(item, recursos = {}) {
@@ -189,11 +189,14 @@ function usosDe(item, recursos = {}) {
   const uses = item.system?.uses ?? {};
   const recuperacao = uses.recovery ?? [];
   // A recarga por dado (5–6) da 5e vira o padrão do T20: recarregar gastando uma ação de movimento.
-  if (recuperacao.some((r) => r.period === 'recharge') || Number(item.system?.recharge?.value)) return { texto: 'Recarga: ação de movimento', max: 0 };
+  if (recuperacao.some((r) => r.period === 'recharge') || Number(item.system?.recharge?.value)) return { texto: 'Recarga (movimento)', max: 0 };
   const max = Number(uses.max);
   const periodo = PERIODOS[recuperacao[0]?.period ?? uses.per];
   return max > 0 && periodo ? { texto: `${max}/${periodo}`, max } : { texto: '', max: 0 };
 }
+
+// Campo "área" do poder pelo modelo de área da atividade (sopro em linha, cone...).
+const areaDe = (item) => areaT20(atividadesDe(item).map((a) => a.target?.template).find((t) => t?.type && Number(t.size) > 0));
 
 const FORMULA_DANO = /^\d*d\d+(?:[+-]\d+)*$/;
 
@@ -245,7 +248,7 @@ function lerCondicoes(ci) {
   const todas = (ci?.value ?? []).map(semPrefixo);
   return {
     value: todas.filter((k) => CONDICOES[k]).map((k) => CONDICOES[k]),
-    custom: [...todas.filter((k) => !CONDICOES[k]), ci?.custom].filter(Boolean).join('; '),
+    custom: condicoesT20([...todas.filter((k) => !CONDICOES[k]), ci?.custom].filter(Boolean).join('; ')),
   };
 }
 
@@ -341,8 +344,12 @@ export function lerAtor5e(ator, { pvSoloNoND } = {}) {
   const habilidades = itens.filter((i) => i.type === 'feat' && i.name && !ehAtaque(i)).map((i) => {
     const usos = usosDe(i, s.resources);
     const texto = textoT20(i.system?.description?.value, nomesPorId);
+    const oficial = /^spellcasting$/i.test(i.name) || i.system?.identifier === 'spellcasting' ? 'magias'
+      : /advantage on saving throws against (?:spells|magic)/i.test(texto) ? 'resistenciaMagia' : undefined;
     const habilidade = {
-      nome: i.name, texto: usos.texto ? `(${usos.texto}) ${texto}` : texto, execucao: execucaoDe(i),
+      ...(oficial && { oficial }),
+      ...(areaDe(i) && { area: areaDe(i) }),
+      nome: i.name, texto: usos.texto && !/\b\d+\/(day|dia)\b/i.test(texto) ? `(${usos.texto}) ${texto}` : texto, execucao: execucaoDe(i),
       ...(usos.max > 0 && { usos: usos.max }),
     };
     const poder = lerDanoPoder(i, i.system?.description?.value);
