@@ -7,7 +7,7 @@ import { PASTA_IMAGENS, nomeDoArquivo, ehUrl, tokenDoCdn5e, urlsCandidatas } fro
 import { papelDoSistema, ndDeReferencia, CODIGOS_TAMANHO, CODIGOS_TIPO, CHAVES_DANO, NOME_DA_PERICIA } from './conversor/mapeamentos.js';
 import { criaturaDeFormulario, aplicarModoAtaques, poderDaTela, MODOS_ATAQUES, EXECUCOES, ATRIBUTOS } from './conversor/origem-cr.js';
 import { montarDadosAtor, ataquesPorArmaDe, ID_CONVERSOR, NOME_PASTA } from './conversor/criar-ator.js';
-import { aplicarProporcaoExtras } from './conversor/dano.js';
+import { aplicarProporcaoExtras, descricaoDeArma } from './conversor/dano.js';
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 
@@ -515,6 +515,17 @@ export class DialogoConversor extends HandlebarsApplicationMixin(ApplicationV2) 
     if (mudou) await ator.update({ 'system.pericias': pericias });
   }
 
+  // O ajuste de ND troca o bônus e o dano das armas; o texto da 5e na descrição passa a mostrar os valores finais.
+  async #atualizarTextoDasArmas(ator) {
+    const mudancas = ator.items.filter((i) => i.type === 'arma').map((arma) => {
+      const rolls = arma.system.rolls;
+      const pericia = rolls.find((r) => r.type === 'ataque')?.parts?.[1]?.[0] || 'luta';
+      const partes = (rolls.find((r) => r.type === 'dano')?.parts ?? []).filter((p, i) => i !== 1);
+      return { _id: arma.id, 'system.description.value': descricaoDeArma(arma.system.description.value, ator.system.pericias[pericia].value, partes) };
+    });
+    if (mudancas.length) await ator.updateEmbeddedDocuments('Item', mudancas);
+  }
+
   static async #criar() {
     this.#lerFormulario();
     // O ator não fica com link remoto: o navegador e módulos como o Tokenizer só carregam imagens que o site libera (CORS).
@@ -545,6 +556,7 @@ export class DialogoConversor extends HandlebarsApplicationMixin(ApplicationV2) 
           ...opcoes, ataquesPorArma: ataquesPorArmaDe(ator.toObject().items, criatura),
         });
         await api.aplicarAjuste(ator, resultado, { copiar: false });
+        if (passada === 1) await this.#atualizarTextoDasArmas(ator);
         console.info(`${ID_CONVERSOR} | perícias após a passada ${passada + 1}: ${['luta', 'fort', 'refl', 'vont']
           .map((k) => `${k}=${ator.system.pericias[k].atributo}/outros ${ator.system.pericias[k].outros}/total ${ator.system.pericias[k].value}`).join('; ')}`);
       }
