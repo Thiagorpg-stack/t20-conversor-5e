@@ -5,6 +5,7 @@ import {
   trocarTesteResistencia, periciaDoAtributo5e, ehAtributoPadraoDeVontade, NOME_DA_PERICIA,
 } from './mapeamentos.js';
 import { sugerirPapel } from './papel.js';
+import { mediaFormula } from './dano.js';
 
 // chave do formulário → chave do dnd5e
 const ATRIBUTOS_5E = { for: 'str', des: 'dex', con: 'con', int: 'int', sab: 'wis', car: 'cha' };
@@ -35,7 +36,8 @@ const ROTULO_DANO = {
 const ENTIDADES = { '&amp;': '&', '&lt;': '<', '&gt;': '>', '&quot;': '"', '&#39;': "'", '&nbsp;': ' ' };
 
 // Texto das descrições do dnd5e: tira HTML, enriquecedores ([[/r 1d20+6]]{+6}, @tag[...], &Reference[...]) e entidades.
-export function limparTexto5e(html) {
+// `nomesPorId` (_id → nome dos itens do ator) resolve os links relativos sem rótulo (@UUID[.id]) para o nome do item.
+export function limparTexto5e(html, nomesPorId = {}) {
   return String(html ?? '')
     .replace(/<\/(?:p|li|div|tr)>|<br\s*\/?>/gi, '\n')
     .replace(/<[^>]+>/g, '')
@@ -47,9 +49,14 @@ export function limparTexto5e(html) {
       return m ? `${m[1]} ${m[2].split(/[|,]/).map((t) => t[0].toUpperCase() + t.slice(1).toLowerCase()).join('/')}` : formula.replace(/\s+average\b/gi, '').trim();
     })
     .replace(/&Reference\[(?:[^=\]|]+=)?([^\]|]+)[^\]]*\]/g, '$1')
-    .replace(/@\w+\[([^\]]*)\](?:\{([^}]*)\})?/g, (_, partes, rotulo) => {
+    .replace(/\[\[\/save\s+([^\]]*)\]\]/gi, (_, args) => {
+      const pericia = periciaDoAtributo5e(/ability=(\w+)/i.exec(args)?.[1]);
+      const cd = /dc=(\d+)/i.exec(args)?.[1];
+      return `${pericia ? NOME_DA_PERICIA[pericia] : 'teste'}${cd ? ` CD ${cd}` : ''}`;
+    })
+    .replace(/@\w+\[((?:[^[\]]|\[[^\]]*\])*)\](?:\{([^}]*)\})?/g, (_, partes, rotulo) => {
       const p = partes.split('|');
-      return rotulo ?? (p[2] || p[0]);
+      return rotulo ?? ((p[0].startsWith('.') && nomesPorId[p[0].slice(1)]) || p[2] || p[0]);
     })
     .replace(/[ \t]+/g, ' ').replace(/\s*\n\s*/g, '\n').trim();
 }
@@ -74,7 +81,23 @@ function tipoDanoDe(item) {
   return item.system?.damage?.base?.types?.[0] ?? item.system?.damage?.parts?.[0]?.[1];
 }
 
-// "one Bite attack and two Tentacle attacks" → { Bite: 1, Tentacle: 2 }. Sem correspondência: null.
+// Dano adicional do golpe (as partes de dano depois da principal, como o 1d10 elétrico do Rend) e a fração dele no
+// dano total (médias; "@mod" vira o modificador do atributo do ataque). O Ajustar ND recalcula só a parte principal.
+function danoExtraDe(item, modDe) {
+  const atividade = atividadesDe(item).find((a) => a.type === 'attack' && a.damage?.parts?.length);
+  const base = item.system?.damage?.base;
+  const partes = [...(base?.number ? [base] : []), ...(atividade ? atividade.damage.parts : (item.system?.damage?.parts ?? []))];
+  const habilidade = atividade?.attack?.ability;
+  const mod = modDe(Object.values(ATRIBUTOS_5E).includes(habilidade) ? habilidade : (distanciaDe(item) ? 'dex' : 'str'));
+  const lidas = partes.map((p) => parteDeDano(p, mod));
+  const danoExtra = lidas.slice(1).filter((p) => p.formula)
+    .map((p) => ({ formula: p.formula, tipo: mapearTipoDano(p.tipo ?? '').chave }));
+  const principal = mediaFormula(lidas[0]?.formula);
+  const extra = danoExtra.reduce((s, d) => s + mediaFormula(d.formula), 0);
+  return { danoExtra, proporcaoExtra: principal + extra > 0 ? Math.round(extra / (principal + extra) * 1000) / 1000 : 0 };
+}
+
+// "one Bite attack and two Tentacle attacks → { Bite: 1, Tentacle: 2 }. Sem correspondência: null.
 export function quantidadeNoMultiataque(texto, nome) {
   const escapado = String(nome).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   const m = new RegExp(`\\b(one|two|three|four|five|six|seven|eight|nine|ten|\\d+)\\s+(?:(?:melee|ranged|weapon)\\s+)?${escapado}s?\\b`, 'i').exec(texto);
@@ -152,7 +175,24 @@ const execucaoDe = (item) => {
 };
 
 // Descrição da 5e em texto T20: sem HTML, "DC" vira "CD" e "Constitution Saving Throw" vira "Fortitude".
-const textoT20 = (html) => trocarDCporCD(trocarTesteResistencia(limparTexto5e(html)));
+const textoT20 = (html, nomesPorId) => trocarDCporCD(trocarTesteResistencia(limparTexto5e(html, nomesPorId)));
+
+const PERIODOS = { day: 'dia', lr: 'descanso longo', sr: 'descanso curto', dawn: 'amanhecer', dusk: 'anoitecer' };
+
+// Usos limitados ("3/dia") ou recarga ("Recarga: ação de movimento") do item: a 5e guarda em `uses`/`recharge`, fora do texto.
+// A resistência lendária não tem `uses`: consome `resources.legres`, cujo máximo são os usos por dia.
+function usosDe(item, recursos = {}) {
+  if (atividadesDe(item).some((a) => a.consumption?.targets?.some((c) => c.target === 'resources.legres.value')) && recursos.legres?.max > 0) {
+    return `${recursos.legres.max}/dia`;
+  }
+  const uses = item.system?.uses ?? {};
+  const recuperacao = uses.recovery ?? [];
+  // A recarga por dado (5–6) da 5e vira o padrão do T20: recarregar gastando uma ação de movimento.
+  if (recuperacao.some((r) => r.period === 'recharge') || Number(item.system?.recharge?.value)) return 'Recarga: ação de movimento';
+  const max = Number(uses.max);
+  const periodo = PERIODOS[recuperacao[0]?.period ?? uses.per];
+  return max > 0 && periodo ? `${max}/${periodo}` : '';
+}
 
 const FORMULA_DANO = /^\d*d\d+(?:[+-]\d+)*$/;
 
@@ -164,12 +204,14 @@ function formulaDeDano(formula) {
 }
 
 // dnd5e 4+: parte = { number, denomination, bonus, types[], custom }; antes: [fórmula, tipo].
-function parteDeDano(parte) {
+// `mod` resolve o bônus "@mod" (modificador do atributo do ataque) quando quem chama precisa da média real.
+function parteDeDano(parte, mod) {
   if (Array.isArray(parte)) return { formula: formulaDeDano(parte[0]), original: parte[0], tipo: parte[1] };
   const tipo = parte.types?.[0];
   if (parte.custom?.enabled) return { formula: formulaDeDano(parte.custom.formula), original: parte.custom.formula, tipo };
   if (!parte.number || !parte.denomination) return { formula: null, original: '', tipo };
-  const bonus = /^[+-]?\d+$/.test(String(parte.bonus ?? '').trim()) ? Number(parte.bonus) : 0;
+  const bruto = String(parte.bonus ?? '').trim();
+  const bonus = /^[+-]?\d+$/.test(bruto) ? Number(bruto) : (bruto === '@mod' && mod !== undefined ? mod : 0);
   return { formula: `${parte.number}d${parte.denomination}${bonus > 0 ? `+${bonus}` : bonus < 0 ? bonus : ''}`, tipo };
 }
 
@@ -234,10 +276,16 @@ export function lerAtor5e(ator, { pvSoloNoND } = {}) {
   const movimento = s.attributes?.movement ?? {};
   const andar = Number(movimento.walk) || 0;
   let deslocamento = 9;
+  const emMetros = movimento.units === 'm';
+  const paraMetros = (v) => (emMetros ? Math.round(v / 1.5) * 1.5 : pesParaMetros(v));
+  const deslocamentosExtra = {};
+  for (const [k, rotulo] of [['fly', 'Voo'], ['swim', 'Natação'], ['climb', 'Escalada'], ['burrow', 'Escavação']]) {
+    const v = Number(movimento[k]) || 0;
+    if (v > 0) { deslocamentosExtra[k] = paraMetros(v); ok(`${rotulo} ${v} ${emMetros ? 'm' : 'pés'} → ${deslocamentosExtra[k]} m`); }
+  }
   if (!andar) revisar('Sem deslocamento terrestre: assumido 9 m.');
   else {
-    const emMetros = movimento.units === 'm';
-    deslocamento = emMetros ? Math.round(andar / 1.5) * 1.5 : pesParaMetros(andar);
+    deslocamento = paraMetros(andar);
     ok(`Deslocamento ${andar} ${emMetros ? 'm' : 'pés'} → ${deslocamento} m`);
   }
 
@@ -252,6 +300,7 @@ export function lerAtor5e(ator, { pvSoloNoND } = {}) {
   const semQuantidade = [];
   const ataques = itens.filter(ehAtaque).map((item) => {
     const dano = mapearTipoDano(tipoDanoDe(item) ?? '');
+    const extras = danoExtraDe(item, (ab) => modificadorAtributo(s.abilities[ab]?.value ?? 10));
     const qtdEncontrada = multiataque ? quantidadeNoMultiataque(textoMulti, item.name) : null;
     if (multiataque && qtdEncontrada === null) semQuantidade.push(item.name);
     const ataque = {
@@ -261,8 +310,10 @@ export function lerAtor5e(ator, { pvSoloNoND } = {}) {
       qtd: qtdEncontrada ?? 1,
       qtd5e: qtdEncontrada ?? 1, // o mestre escolhe no diálogo se segue o multiataque da 5e ou não
       descricao: textoT20(item.system?.description?.value),
+      ...extras,
+      extraNoBalanceamento: true,
     };
-    (dano.revisar ? revisar : ok)(`Ataque ${ataque.nome}: ${ataque.tipo === 'ad' ? 'à distância' : 'corpo a corpo'}, dano ${ataque.dano}${dano.revisar ? ' (aproximação)' : ''}, ×${ataque.qtd}`);
+    (dano.revisar ? revisar : ok)(`Ataque ${ataque.nome}: ${ataque.tipo === 'ad' ? 'à distância' : 'corpo a corpo'}, dano ${ataque.dano}${ataque.danoExtra.map((d) => ` + ${d.formula} ${d.tipo}`).join('')}${ataque.danoExtra.length ? ` (${Math.round(ataque.proporcaoExtra * 100)}% do golpe)` : ''}${dano.revisar ? ' (aproximação)' : ''}, ×${ataque.qtd}`);
     return ataque;
   });
   if (!ataques.length) revisar('Nenhum ataque encontrado: adicione os ataques à mão.');
@@ -281,8 +332,11 @@ export function lerAtor5e(ator, { pvSoloNoND } = {}) {
   revisar(`Papel sugerido: ${sugestao.papel} (${MOTIVOS_PAPEL[sugestao.motivo]})${sugestao.chefeFinalSugerido ? '; Chefe Final marcado' : ''}.`);
 
   // habilidades (inclusive o Multiataque) viram poderes só com o texto; contam para os poderes do patamar no Ajustar ND
+  const nomesPorId = Object.fromEntries(itens.filter((i) => i._id).map((i) => [i._id, i.name]));
   const habilidades = itens.filter((i) => i.type === 'feat' && i.name && !ehAtaque(i)).map((i) => {
-    const habilidade = { nome: i.name, texto: textoT20(i.system?.description?.value), execucao: execucaoDe(i) };
+    const usos = usosDe(i, s.resources);
+    const texto = textoT20(i.system?.description?.value, nomesPorId);
+    const habilidade = { nome: i.name, texto: usos ? `(${usos}) ${texto}` : texto, execucao: execucaoDe(i) };
     const poder = lerDanoPoder(i, i.system?.description?.value);
     if (poder.invalidas.length) revisar(`Poder ${i.name}: dano sem fórmula numérica (${poder.invalidas.join(', ')}); ajuste o dano à mão.`);
     if (!poder.dano) return habilidade;
@@ -321,7 +375,6 @@ export function lerAtor5e(ator, { pvSoloNoND } = {}) {
   const fora = [];
   if (Object.values(s.skills ?? {}).some((p) => p.value > 0)) fora.push('perícias treinadas');
   if (Object.values(s.abilities).some((a) => a.proficient)) fora.push('testes de resistência proficientes');
-  if (['fly', 'swim', 'climb', 'burrow'].some((k) => Number(movimento[k]) > 0)) fora.push('deslocamentos especiais');
   const magias = itens.filter((i) => i.type === 'spell').length;
   if (magias) fora.push(`${magias} magia(s)`);
   if (itens.some((i) => !['weapon', 'feat', 'spell'].includes(i.type))) fora.push('equipamentos');
@@ -336,7 +389,7 @@ export function lerAtor5e(ator, { pvSoloNoND } = {}) {
     ok: true,
     imagens,
     estado: {
-      nome: ator.name ?? '', cr, tamanho: tamanho.codigo, tipo: tipo.codigo, deslocamento, atributos,
+      nome: ator.name ?? '', cr, tamanho: tamanho.codigo, tipo: tipo.codigo, deslocamento, deslocamentosExtra, atributos,
       ataques, modoAtaques: '5e', habilidades, papel: sugestao.papel, chefeFinal: sugestao.chefeFinalSugerido,
       sentidos, idiomas, idiomasCustom, resistencias, resistenciasDano, imunidadesCondicao,
     },

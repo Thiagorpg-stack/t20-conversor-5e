@@ -2,7 +2,7 @@
 
 Módulo para Foundry VTT que converte criaturas de **D&D 5e** em ameaças de **Tormenta20**, usando as tabelas por ND e papel (Solo, Lacaio ou Especial) e o motor do módulo **Ajustar ND**.
 
-> **Status: v0.2.0 (em teste).** A v1, "Criar ameaça a partir de CR", e a v2, "Importar JSON de 5e", estão implementadas. A v3 (texto colado) ainda não existe. A 0.2.0 converte também o **dano dos poderes** (veja abaixo) e exige o Ajustar ND 0.10.0.
+> **Status: v0.3.0 (em teste).** A v1, "Criar ameaça a partir de CR", e a v2, "Importar JSON de 5e", estão implementadas. A v3 (texto colado) ainda não existe. A 0.2.0 trouxe o **dano dos poderes**; a 0.3.0 traz o **dano adicional dos golpes**, os deslocamentos de voo, escavação, natação e escalada, os usos e a recarga dos poderes e o nome das magias. Exige o Ajustar ND 0.10.0.
 
 *English: Foundry VTT module that converts D&D 5e creatures into Tormenta20 threats, using the per-ND and per-role parameter tables.*
 
@@ -11,6 +11,9 @@ Módulo para Foundry VTT que converte criaturas de **D&D 5e** em ameaças de **T
 - Converte só os **números** (ND, papel, PV, Defesa, CD, ataque, resistências e dano), pela tabela.
 - Entrega as habilidades, magias e ações lendárias como **texto para revisão**; não traduz regras.
 - **Poderes com dano** (sopro, constrição, rugido...): lê o dano (dado, bônus, tipo) e o teste de resistência da 5e, troca "Constitution Saving Throw" por "Fortitude" (e os demais atributos pela perícia do T20), cria a rolagem de dano no poder e marca o poder para o Ajustar ND recalcular o dano pela tabela. Por poder, o diálogo permite desligar o ajuste ("Ajustar o dano pela tabela do ND") e escolher se tem efeito (condição, teste de resistência ou área). Carisma e Inteligência viram Vontade (padrão assumido).
+- **Dano adicional do golpe** (o 1d10 elétrico do Rend do dragão azul): vira uma segunda parte do dano da arma, com o tipo editável no diálogo. Uma caixa por ataque define se esse dano entra no balanceamento: marcada, ele mantém a proporção que tinha na 5e (calculada com o modificador do atributo do ataque) sobre o dano total por golpe do ND; desmarcada, ele fica fixo e só o dano principal é recalculado.
+- **Deslocamentos** de voo, escavação, natação e escalada são convertidos para metros. **Usos e recarga** dos poderes entram no início do texto ("(3/dia)", "(Recarga: ação de movimento)"). Links de magia (`@UUID[.id]`) viram o nome da magia.
+- Ao criar o ator, os atributos das perícias voltam aos da regra e o ajuste de ND roda duas vezes, para o que a ficha mostra bater com a tabela.
 - Calcula o ND com uma **calibração de ritmo**: um grupo de T20 aguenta 1 a 2 combates do seu ND por descanso, e em 5e o dia de aventura espera 6 a 8. O mestre informa o nível do grupo e o ritmo desejado.
 
 ## Como usar (v1)

@@ -161,7 +161,7 @@ export function criarItemPoder({ nome, descricao = '', execucao = '', dano = [],
 }
 
 // Item de arma. `distancia` troca propósito, alcance e propriedades; `tipoDano` é uma chave de dano do sistema.
-export function criarItemArma({ nome, distancia = false, tipoDano = 'corte', ataques = 1, pericia = 'luta', descricao = '' }) {
+export function criarItemArma({ nome, distancia = false, tipoDano = 'corte', ataques = 1, pericia = 'luta', descricao = '', danoExtra = [] }) {
   return {
     name: nome,
     type: 'arma',
@@ -189,7 +189,8 @@ export function criarItemArma({ nome, distancia = false, tipoDano = 'corte', ata
       enableAutoUpgrades: true,
       rolls: [
         { name: 'Ataque', key: 'ataque0', type: 'ataque', adaptavel: '', parts: [['1d20', '', ''], [pericia, '', ''], ['0', '', '']] },
-        { name: 'Dano', key: 'dano1', type: 'dano', adaptavel: '', parts: [['1d6', tipoDano, ''], ['', '', '']] },
+        // Na arma, parts[1] é o atributo somado ao dano (campo da ficha, fica vazio); o dano adicional começa em parts[2].
+        { name: 'Dano', key: 'dano1', type: 'dano', adaptavel: '', parts: [['1d6', tipoDano, ''], ['', '', ''], ...danoExtra.map((d) => [d.formula, d.tipo, ''])] },
       ],
     },
     effects: [], folder: null, sort: 0, flags: {}, ownership: { default: 0 },

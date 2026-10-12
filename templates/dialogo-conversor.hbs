@@ -120,6 +120,15 @@
       <select data-campo="dano">{{#each danos}}<option value="{{valor}}" {{#if selecionado}}selected{{/if}}>{{rotulo}}</option>{{/each}}</select>
       <input type="number" data-campo="qtd" value="{{qtd}}" min="1" title="{{localize 'T20C5E.AtaqueQtd'}}">
       <button type="button" data-action="removerAtaque" data-indice="{{indice}}" title="{{localize 'T20C5E.Remover'}}"><i class="fas fa-trash"></i></button>
+      {{#if extras.length}}
+      <div class="conversor__extra">
+        {{#each extras}}
+        <span>+ {{formula}}</span>
+        <select data-campo-extra="tipo" data-extra="{{indice}}" title="{{localize 'T20C5E.DanoAdicional'}}">{{#each danos}}<option value="{{valor}}" {{#if selecionado}}selected{{/if}}>{{rotulo}}</option>{{/each}}</select>
+        {{/each}}
+        <label title="{{localize 'T20C5E.ExtraNoBalanceamentoDica'}}"><input type="checkbox" data-campo-extra="balanceamento" {{#if extraNoBalanceamento}}checked{{/if}}> {{localize "T20C5E.ExtraNoBalanceamento"}} ({{proporcaoExtra}}%)</label>
+      </div>
+      {{/if}}
     </div>
     {{/each}}
     <button type="button" data-action="addAtaque"><i class="fas fa-plus"></i> {{localize "T20C5E.AddAtaque"}}</button>

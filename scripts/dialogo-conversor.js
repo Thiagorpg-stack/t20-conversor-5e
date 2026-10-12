@@ -7,6 +7,7 @@ import { PASTA_IMAGENS, nomeDoArquivo, ehUrl, tokenDoCdn5e, urlsCandidatas } fro
 import { papelDoSistema, ndDeReferencia, CODIGOS_TAMANHO, CODIGOS_TIPO, CHAVES_DANO, NOME_DA_PERICIA } from './conversor/mapeamentos.js';
 import { criaturaDeFormulario, aplicarModoAtaques, poderDaTela, MODOS_ATAQUES, EXECUCOES, ATRIBUTOS } from './conversor/origem-cr.js';
 import { montarDadosAtor, ataquesPorArmaDe, ID_CONVERSOR, NOME_PASTA } from './conversor/criar-ator.js';
+import { aplicarProporcaoExtras } from './conversor/dano.js';
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 
@@ -130,6 +131,12 @@ export class DialogoConversor extends HandlebarsApplicationMixin(ApplicationV2) 
       nd: ndFinal, papel: papelDoSistema(criatura.papel), ordemResistencias: e.ordem,
       templates: { chefeFinal: criatura.chefeFinal },
     };
+    // Dano adicional que segue a proporção da 5e: o total por golpe vem de uma simulação prévia do Ajustar ND.
+    if (criatura.ataques.some((a) => a.extraNoBalanceamento && a.proporcaoExtra > 0 && a.danoExtra.length)) {
+      const previo = new CONFIG.Actor.documentClass(dados);
+      const r = await api.simular(previo, { ...opcoes, ataquesPorArma: ataquesPorArmaDe(previo.toObject().items, criatura) });
+      aplicarProporcaoExtras(dados, criatura, r.plano.dano?.porArma);
+    }
     return { api, criatura, calculo, ndFinal, ndReferencia, limiteAtaques, dados, opcoes };
   }
 
@@ -151,6 +158,12 @@ export class DialogoConversor extends HandlebarsApplicationMixin(ApplicationV2) 
         indice, nome: a.nome, qtd: a.qtd,
         tipos: [['cac', t('T20C5E.CorpoACorpo')], ['ad', t('T20C5E.ADistancia')]].map(([v, r]) => ({ valor: v, rotulo: r, selecionado: v === a.tipo })),
         danos: CHAVES_DANO.map((v) => ({ valor: v, rotulo: NOMES_DANO[v], selecionado: v === a.dano })),
+        extras: (a.danoExtra ?? []).map((x, j) => ({
+          indice: j, formula: x.formula,
+          danos: CHAVES_DANO.map((v) => ({ valor: v, rotulo: NOMES_DANO[v], selecionado: v === x.tipo })),
+        })),
+        extraNoBalanceamento: a.extraNoBalanceamento !== false,
+        proporcaoExtra: Math.round((a.proporcaoExtra ?? 0) * 100),
       })),
       ordem: ['Forte', 'Média', 'Fraca'].map((rotulo, i) => ({
         indice: i, rotulo,
@@ -277,6 +290,11 @@ export class DialogoConversor extends HandlebarsApplicationMixin(ApplicationV2) 
         dano: linha.querySelector('[data-campo=dano]').value,
         qtd: linha.querySelector('[data-campo=qtd]').value,
         descricao: anteriores[i]?.descricao ?? '',
+        danoExtra: (anteriores[i]?.danoExtra ?? []).map((x, j) => ({
+          ...x, tipo: linha.querySelector(`[data-campo-extra=tipo][data-extra="${j}"]`)?.value ?? x.tipo,
+        })),
+        proporcaoExtra: anteriores[i]?.proporcaoExtra,
+        extraNoBalanceamento: linha.querySelector('[data-campo-extra=balanceamento]')?.checked ?? anteriores[i]?.extraNoBalanceamento,
         qtd5e: anteriores[i]?.qtd5e,
       }));
     }
@@ -485,6 +503,16 @@ export class DialogoConversor extends HandlebarsApplicationMixin(ApplicationV2) 
     await this.close();
   }
 
+  // O sistema pode criar as perícias de um NPC todas com Força; volta cada uma ao atributo da regra (Fortitude = Constituição...).
+  async #normalizarPericias(ator) {
+    const mudancas = {};
+    for (const [chave, regra] of Object.entries(CONFIG.T20.pericias)) {
+      const pericia = ator.system.pericias?.[chave];
+      if (pericia && regra.abl && pericia.atributo !== regra.abl) mudancas[`system.pericias.${chave}.atributo`] = regra.abl;
+    }
+    if (Object.keys(mudancas).length) await ator.update(mudancas);
+  }
+
   static async #criar() {
     this.#lerFormulario();
     // O ator não fica com link remoto: o navegador e módulos como o Tokenizer só carregam imagens que o site libera (CORS).
@@ -508,10 +536,16 @@ export class DialogoConversor extends HandlebarsApplicationMixin(ApplicationV2) 
       const pasta = game.folders.find((f) => f.type === 'Actor' && f.name === NOME_PASTA)
         ?? await Folder.create({ name: NOME_PASTA, type: 'Actor' });
       ator = await Actor.create({ ...dados, folder: pasta.id });
-      const resultado = await api.simular(ator, {
-        ...opcoes, ataquesPorArma: ataquesPorArmaDe(ator.toObject().items, criatura),
-      });
-      await api.aplicarAjuste(ator, resultado, { copiar: false });
+      await this.#normalizarPericias(ator);
+      // Duas passadas: a segunda calibra de novo sobre o ator como ele ficou, para o que a ficha mostra bater com a tabela.
+      for (let passada = 0; passada < 2; passada++) {
+        const resultado = await api.simular(ator, {
+          ...opcoes, ataquesPorArma: ataquesPorArmaDe(ator.toObject().items, criatura),
+        });
+        await api.aplicarAjuste(ator, resultado, { copiar: false });
+        console.info(`${ID_CONVERSOR} | perícias após a passada ${passada + 1}`, Object.fromEntries(
+          ['luta', 'fort', 'refl', 'vont'].map((k) => [k, { ...ator.system.pericias[k] }])));
+      }
     } catch (erro) {
       console.error(`${ID_CONVERSOR} |`, erro);
       if (ator) await ator.delete().catch(() => {});

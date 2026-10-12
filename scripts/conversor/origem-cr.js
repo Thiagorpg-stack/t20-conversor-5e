@@ -74,6 +74,9 @@ export function criaturaDeFormulario(f) {
   const deslocamento = Number(f.deslocamento ?? 9);
   if (!(deslocamento >= 0)) erros.push('deslocamento');
 
+  const deslocamentosExtra = Object.fromEntries(['fly', 'swim', 'climb', 'burrow']
+    .map((k) => [k, Math.max(0, Number(f.deslocamentosExtra?.[k]) || 0)]));
+
   const atributos = {};
   for (const chave of ATRIBUTOS) atributos[chave] = Math.min(30, Math.max(-10, inteiro(f.atributos?.[chave], 0)));
 
@@ -85,6 +88,11 @@ export function criaturaDeFormulario(f) {
     return {
       nome: nomeAtaque, distancia: tipo === 'ad', tipoDano: dano, qtd: Math.max(1, inteiro(a.qtd, 1)),
       descricao: String(a.descricao ?? '').trim(),
+      danoExtra: (a.danoExtra ?? [])
+        .map((d) => ({ formula: String(d.formula ?? '').replace(/\s+/g, ''), tipo: CHAVES_DANO.includes(d.tipo) ? d.tipo : 'dano' }))
+        .filter((d) => FORMULA_DANO.test(d.formula)),
+      proporcaoExtra: Math.min(0.95, Math.max(0, Number(a.proporcaoExtra) || 0)),
+      extraNoBalanceamento: a.extraNoBalanceamento !== false,
     };
   });
 
@@ -124,6 +132,7 @@ export function criaturaDeFormulario(f) {
       tamanho: f.tamanho,
       tipo: f.tipo,
       deslocamento,
+      deslocamentosExtra,
       atributos,
       ataques,
       habilidades,

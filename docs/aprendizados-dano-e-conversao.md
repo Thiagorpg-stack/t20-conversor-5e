@@ -179,6 +179,16 @@ As descrições trazem enriquecedores e HTML. Regras usadas: tirar HTML (parágr
 `[[/r 1d20+6]]{+6}` → `+6`; `[[/damage 2d8 + 3 type=piercing]]` → `2d8 + 3 Piercing`; `&Reference[condition=Poisoned]` →
 `Poisoned`; `@variantrule[Long Rest|XPHB]` → `Long Rest` (com três partes usa a terceira); decodificar entidades.
 
+- **Usos e recarga ficam fora do texto.** Recarga: `system.uses.recovery[]` com `period: 'recharge'` e `formula: '5'`
+  (dnd5e 3.x: `system.recharge.value`). Usos: `uses.max` e `uses.recovery[0].period` (`day`, `lr`, `sr`...). A resistência
+  lendária não tem `uses`: a atividade consome `resources.legres.value`, e o máximo está em `system.resources.legres.max`.
+- **Magias do monstro** são itens `spell` do próprio ator, e o texto do conjurar as cita por link relativo
+  `@UUID[.<_id do item>]`, sem rótulo: o `_id` resolve o nome.
+- **Dano adicional do golpe**: partes de dano depois da primeira (`activities.*.damage.parts[1..]`). O bônus `"@mod"` é o
+  modificador do atributo do ataque (`attack.ability`; vazio = FOR no corpo a corpo, DES à distância). Sem resolvê-lo a
+  proporção sai errada (2d8 vale 9; com +7 vale 16).
+- `@variantrule[Line [Area of Effect]|XPHB|Line]` tem colchetes aninhados; `[[/save ability=dex dc=15]]` é teste de resistência.
+
 ## 8. Formato do Tormenta20 (sistema 1.6.6)
 
 - **Ator NPC**: `system.atributos.X.base` (modificador), `system.attributes.{nd (texto), cd, defesa.base, pv, movement.walk.base (m)}`,
@@ -194,6 +204,12 @@ As descrições trazem enriquecedores e HTML. Regras usadas: tirar HTML (parágr
 - **Linha de ataques** (`ataquescac`/`ataquesad`): `"Mordida +44 (4d12+40, 17) e duas garras +44 (3d12+40, 17)."`
   O Ajustar ND reescreve o trecho `Nome +N (fórmula…)` de cada arma citada. Gerar a linha com valores provisórios
   (`Bite +0 (1d6) e 2 Tentacle +0 (1d6)`) basta: ele troca o bônus e a fórmula (confirmado rodando a função real).
+- **Rolagem de dano da arma**: `parts[0]` é o dano principal (fórmula e tipo), `parts[1]` é o campo do atributo somado ao dano
+  (fica vazio) e o **dano adicional começa em `parts[2]`** (confirmado em `item-rolls.hbs`). Gravar o adicional em `parts[1]`
+  esconde-o na ficha. O Ajustar ND recalcula só `parts[0]` e mantém as demais partes fixas (a soma delas é o "secundário").
+- **Perícias do NPC**: o sistema pode criá-las todas com atributo `for`, o que faz Fortitude, Reflexos e Vontade ficarem
+  acima do alvo (+1, +7, +5 no dragão: 7 menos o modificador certo). O conversor devolve cada perícia ao atributo da regra e roda o
+  ajuste duas vezes. Fortitude ainda aparece como FOR na ficha, só no rótulo; os valores batem com a tabela.
 - **Ajustar ND troca todas as CDs** do texto pela da tabela. Efeito colateral: a CD de escape de agarrar da 5e
   (CD 13) vira CD 20; é preciso revisão manual.
 
@@ -233,6 +249,8 @@ em `!actors.items!<ator>.<item>`. Sem instalar nada e sem tocar nos arquivos ori
 
 ## 11. O que NÃO foi verificado
 
+- Por que o atributo das perícias do NPC vira `for` (sistema ou formulário da ficha); a causa não foi achada.
+- A CD de testes de resistência de efeitos de região (ex.: afundamento do covil, CD 15 na 5e) vira a CD da tabela.
 - A regra do livro para o dano de poderes de reação, movimento, livre e passivo; só os padrões dos dados.
 - O fator "sem efeito" (0,7) e o fator para poderes de alvo único de ação padrão.
 - Os limites de dados e de bônus fixo em ND alto (o mestre vai pesquisar nos livros); o limite ND+1 é o que

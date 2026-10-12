@@ -39,7 +39,7 @@ test('formulário válido vira criatura neutra', () => {
   assert.equal(c.cr, 3);
   assert.equal(c.nivelGrupo, null);
   assert.deepEqual(c.atributos, { for: 3, des: 2, con: 2, int: -4, sab: 1, car: -1 });
-  assert.deepEqual(c.ataques[0], { nome: 'Mordida', distancia: false, tipoDano: 'perfuracao', qtd: 2, descricao: '' });
+  assert.deepEqual(c.ataques[0], { nome: 'Mordida', distancia: false, tipoDano: 'perfuracao', qtd: 2, descricao: '', danoExtra: [], proporcaoExtra: 0, extraNoBalanceamento: true });
   assert.deepEqual(c.habilidades, []);
   assert.equal(c.ataques[1].distancia, true);
 });

@@ -32,7 +32,9 @@
 .t20-conversor-5e .conversor__arquivo input { flex: 1 1 auto; }
 .t20-conversor-5e .conversor__arquivo button { flex: 0 0 auto; width: auto; }
 
-.t20-conversor-5e .conversor__ataque { flex-wrap: nowrap; align-items: center; }
+.t20-conversor-5e .conversor__ataque { flex-wrap: wrap; align-items: center; }
+.t20-conversor-5e .conversor__extra { flex: 1 1 100%; display: flex; flex-wrap: wrap; gap: 0.5rem 0.75rem; align-items: center; font-size: 0.9em; }
+.t20-conversor-5e .conversor__extra label { flex-direction: row; align-items: center; gap: 0.3rem; }
 .t20-conversor-5e .conversor__ataque input[data-campo=nome] { flex: 1 1 10rem; }
 .t20-conversor-5e .conversor__ataque select { flex: 0 0 auto; }
 .t20-conversor-5e .conversor__ataque input[data-campo=qtd] { flex: 0 0 4rem; width: 4rem; text-align: center; }

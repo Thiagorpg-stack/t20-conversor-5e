@@ -2,6 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { existsSync, readFileSync } from 'node:fs';
 import { lerAtor5e, limparTexto5e, quantidadeNoMultiataque } from '../scripts/conversor/origem-json.js';
+import { mediaFormula, formulaDeMedia, aplicarProporcaoExtras } from '../scripts/conversor/dano.js';
 import { criaturaDeFormulario } from '../scripts/conversor/origem-cr.js';
 import { montarDadosAtor } from '../scripts/conversor/criar-ator.js';
 
@@ -57,7 +58,7 @@ test('lerAtor5e: preenche o formulário e classifica o que importou, o que pede 
   assert.equal(e.tipo, 'hum');
   assert.equal(e.deslocamento, 9);
   assert.deepEqual(e.atributos, { for: -1, des: 4, con: 0, int: 0, sab: 1, car: 0 });
-  assert.deepEqual(e.ataques, [{ nome: 'Shortbow', tipo: 'ad', dano: 'impacto', qtd: 2, qtd5e: 2, descricao: 'CD 12 test' }]);
+  assert.deepEqual(e.ataques, [{ nome: 'Shortbow', tipo: 'ad', dano: 'impacto', qtd: 2, qtd5e: 2, descricao: 'CD 12 test', danoExtra: [], proporcaoExtra: 0, extraNoBalanceamento: true }]);
   assert.deepEqual(e.habilidades, [
     { nome: 'Nimble Escape', texto: 'Foge.', execucao: '' },
     { nome: 'Multiattack', texto: 'makes two Shortbow attacks', execucao: '' },
@@ -184,4 +185,91 @@ test('Otyugh real: o que o importador acerta', { skip: !existsSync(arquivoOtyugh
   });
   assert.equal(e.modoAtaques, '5e');
   assert.deepEqual(e.ataques.map((a) => a.qtd5e), [1, 2]);
+});
+
+test('limparTexto5e: link relativo sem rótulo vira o nome do item do ator', () => {
+  assert.equal(limparTexto5e('@UUID[.abc123], @UUID[.xyz]{Shatter}, @UUID[.nada]', { abc123: 'Invisibility' }),
+    'Invisibility, Shatter, .nada');
+});
+
+test('lerAtor5e: magias por nome, voo e usos/recarga dos poderes (dragão)', () => {
+  const dragao = ator5e({ system: { attributes: { movement: { walk: 40, fly: 80, burrow: 30, units: 'ft' }, hp: { max: 212 } } } });
+  dragao.items.push(
+    { _id: 'sp1', type: 'spell', name: 'Shatter' },
+    { type: 'feat', name: 'Spellcasting', system: { description: { value: '<p>@UUID[.sp1]</p>' } } },
+    { type: 'feat', name: 'Legendary Resistance', system: { uses: { max: '3', recovery: [{ period: 'day', type: 'recoverAll' }] }, description: { value: '<p>Succeeds.</p>' } } },
+    { type: 'feat', name: 'Breath', system: { uses: { max: '1', recovery: [{ period: 'recharge', formula: '5' }] }, description: { value: '<p>Sopro.</p>' } } },
+  );
+  const e = lerAtor5e(dragao).estado;
+  const texto = (n) => e.habilidades.find((h) => h.nome === n).texto;
+  assert.equal(texto('Spellcasting'), 'Shatter');
+  assert.equal(texto('Legendary Resistance'), '(3/dia) Succeeds.');
+  assert.equal(texto('Breath'), '(Recarga: ação de movimento) Sopro.');
+  assert.deepEqual(e.deslocamentosExtra, { fly: 24, burrow: 9 });
+
+  const { criatura } = criaturaDeFormulario({ ...e, ritmo: 't20', nd: '1' });
+  assert.deepEqual(criatura.deslocamentosExtra, { fly: 24, swim: 0, climb: 0, burrow: 9 });
+  const dados = montarDadosAtor(criatura, { nd: '1', gerarId: () => 'id' });
+  assert.equal(dados.system.attributes.movement.fly.base, 24);
+  assert.equal(dados.system.attributes.movement.burrow.base, 9);
+});
+
+// Dragão Azul Adulto (MM 2025): magias por link relativo, voo, resistência lendária e recarga; fora do repositório.
+const arquivoDragao = new URL('./fixtures/dragao-azul-5e.json', import.meta.url);
+test('Dragão azul real: magias, voo, usos e recarga', { skip: !existsSync(arquivoDragao) && 'sem tests/fixtures/dragao-azul-5e.json' }, () => {
+  const e = lerAtor5e(JSON.parse(readFileSync(arquivoDragao, 'utf8')), { pvSoloNoND: () => 800 }).estado;
+  const texto = (n) => e.habilidades.find((h) => h.nome === n).texto;
+  assert.match(texto('Spellcasting'), /At will: Detect Magic, Invisibility, Mage Hand, Shatter/);
+  assert.match(texto('Spellcasting'), /1\/day each: Scrying, Sending/);
+  assert.match(texto('Legendary Resistance'), /^\(3\/dia\) /);
+  assert.match(texto('Lightning Breath'), /^\(Recarga: ação de movimento\) /);
+  assert.deepEqual(e.deslocamentosExtra, { fly: 24, burrow: 9 });
+  assert.deepEqual(e.ataques[0].danoExtra, [{ formula: '1d10', tipo: 'eletricidade' }]);
+  assert.equal(e.ataques[0].proporcaoExtra, 0.256); // 2d8+7 (16) e 1d10 (5,5): 5,5 / 21,5
+  assert.doesNotMatch(texto('Lightning Breath'), /\[Area/);
+  assert.equal(e.papel, 'solo');
+});
+
+test('dano adicional do golpe (1d10 elétrico do Rend) vira segunda parte do dano, sem mexer na principal', () => {
+  const parte = (tipo, number, denomination, bonus = '') => ({ types: [tipo], number, denomination, bonus, custom: { enabled: false } });
+  const rend = { type: 'weapon', name: 'Rend', system: {
+    description: { value: '<p>Hit.</p>' }, damage: { base: { types: [] } },
+    activities: { a: atividade('attack', { attack: { type: { value: 'melee' } }, damage: { parts: [parte('slashing', 2, 8, '@mod'), parte('lightning', 1, 10)] } }) },
+  } };
+  const e = lerAtor5e(ator5e({ ator: { items: [rend] } })).estado;
+  assert.deepEqual(e.ataques[0].danoExtra, [{ formula: '1d10', tipo: 'eletricidade' }]);
+  assert.equal(e.ataques[0].dano, 'corte');
+  assert.equal(e.ataques[0].proporcaoExtra, 0.407); // principal 2d8-1 = 8 ("@mod" = FOR 8 = -1), extra 5,5 → 5,5 / 13,5
+  const { criatura } = criaturaDeFormulario({ ...e, ritmo: 't20', nd: '1' });
+  const dados = montarDadosAtor(criatura, { nd: '1', gerarId: () => 'id' });
+  assert.deepEqual(dados.items[0].system.rolls[1].parts, [['1d6', 'corte', ''], ['', '', ''], ['1d10', 'eletricidade', '']]);
+});
+
+test('limparTexto5e: tags com colchetes aninhados e [[/save]]', () => {
+  assert.equal(limparTexto5e('5-foot-wide @variantrule[Line [Area of Effect]|XPHB|Line]. A [[/save ability=dex dc=15]] saving throw'),
+    '5-foot-wide Line. A Reflexos CD 15 saving throw');
+});
+
+test('médias e fórmulas de dano', () => {
+  assert.equal(mediaFormula('2d8+7'), 16);
+  assert.equal(mediaFormula('1d10'), 5.5);
+  assert.equal(mediaFormula('6d6+40'), 61);
+  assert.equal(formulaDeMedia(17, 10), '2d10+6');
+  assert.equal(formulaDeMedia(5.5, 10), '1d10');
+});
+
+test('dano adicional entra no balanceamento: segue a proporção da 5e sobre o dano total do golpe', () => {
+  const dados = { items: [
+    { _id: 'a', type: 'arma', flags: { 't20-conversor-5e': { indiceAtaque: 0 } }, system: { rolls: [
+      { type: 'ataque', parts: [] },
+      { type: 'dano', parts: [['1d6', 'corte', ''], ['', '', ''], ['1d10', 'eletricidade', '']] }] } },
+    { _id: 'b', type: 'arma', flags: { 't20-conversor-5e': { indiceAtaque: 1 } }, system: { rolls: [
+      { type: 'dano', parts: [['1d6', 'corte', ''], ['', '', ''], ['1d10', 'eletricidade', '']] }] } },
+  ] };
+  const criatura = { ataques: [
+    { extraNoBalanceamento: true, proporcaoExtra: 0.256 },
+    { extraNoBalanceamento: false, proporcaoExtra: 0.256 }] };
+  aplicarProporcaoExtras(dados, criatura, { a: { danoPorGolpe: 61.17 }, b: { danoPorGolpe: 61.17 } });
+  assert.equal(dados.items[0].system.rolls[1].parts[2][0], '2d10+6'); // 0,256 × 66,67 ≈ 17
+  assert.equal(dados.items[1].system.rolls[0].parts[2][0], '1d10'); // desmarcado: fica fixo
 });

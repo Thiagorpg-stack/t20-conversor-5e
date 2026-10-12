@@ -54,6 +54,7 @@ export function montarDadosAtor(criatura, { nd, gerarId, pasta = null, ndReferen
   for (const [chave, mod] of Object.entries(criatura.atributos)) sys.atributos[chave].base = mod;
   sys.attributes.nd = String(nd);
   sys.attributes.movement.walk.base = criatura.deslocamento;
+  for (const [tipo, metros] of Object.entries(criatura.deslocamentosExtra ?? {})) sys.attributes.movement[tipo].base = metros;
   sys.detalhes.role = papelDoSistema(criatura.papel);
   sys.detalhes.tipo = criatura.tipo;
   sys.tracos.tamanho = criatura.tamanho;
@@ -84,7 +85,7 @@ export function montarDadosAtor(criatura, { nd, gerarId, pasta = null, ndReferen
 
   const armas = criatura.ataques.map((ataque, indice) => {
     const item = criarItemArma({
-      nome: ataque.nome, distancia: ataque.distancia, tipoDano: ataque.tipoDano, ataques: ataque.qtd,
+      nome: ataque.nome, distancia: ataque.distancia, tipoDano: ataque.tipoDano, ataques: ataque.qtd, danoExtra: ataque.danoExtra,
       descricao: ataque.descricao ? paragrafos(`${ataque.nome}. ${ataque.descricao}`) : '',
     });
     item._id = gerarId();
