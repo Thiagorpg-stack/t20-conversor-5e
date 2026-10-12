@@ -101,6 +101,7 @@ export function criaturaDeFormulario(f) {
       const habilidade = {
         nome: String(h.nome ?? '').trim(), texto: String(h.texto ?? '').trim(),
         execucao: EXECUCOES.includes(h.execucao) ? h.execucao : '',
+        ...(Number(h.usos) >= 1 && { usos: Math.min(99, Math.floor(Number(h.usos))) }),
       };
       const dano = (h.dano ?? [])
         .map((d) => ({ formula: String(d.formula ?? '').replace(/\s+/g, ''), tipo: CHAVES_DANO.includes(d.tipo) ? d.tipo : 'dano' }))
@@ -147,6 +148,8 @@ export function criaturaDeFormulario(f) {
       },
       imunidadesCondicao: { value: lista(f.imunidadesCondicao?.value), custom: String(f.imunidadesCondicao?.custom ?? '').trim() },
       chefeFinal: Boolean(f.chefeFinal),
+      conjurador: Boolean(f.conjurador),
+      conjuracao: ATRIBUTOS.includes(f.conjuracao) ? f.conjuracao : 'int',
     },
   };
 }

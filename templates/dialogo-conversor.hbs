@@ -93,6 +93,10 @@
       <input type="checkbox" name="chefeFinal" {{#if e.chefeFinal}}checked{{/if}}>
       {{localize "T20C5E.ChefeFinal"}}
     </label>
+    <label class="conversor__marca" title="{{localize 'T20C5E.ConjuradorDica'}}">
+      <input type="checkbox" name="conjurador" {{#if e.conjurador}}checked{{/if}}>
+      {{localize "T20C5E.Conjurador"}}
+    </label>
     <div class="conversor__linha">
       <span>{{localize "T20C5E.Resistencias"}}:</span>
       {{#each ordem}}

@@ -47,6 +47,8 @@
   "T20C5E.NDCalibrado": "ND calibrado pelo ritmo",
   "T20C5E.SemFormula": "CR acima de 20: só a tabela de referência",
   "T20C5E.NDManual": "ND escolhido por você",
+  "T20C5E.Conjurador": "Conjurador (PM = 5 × ND)",
+  "T20C5E.ConjuradorDica": "Sugestão: a criatura recebe 5 PM por ND (o Chefe Final soma mais). O mestre pode mudar os PM na ficha.",
   "T20C5E.ChefeFinal": "Template Chefe Final (PV dobrado, PM e RD)",
   "T20C5E.Resistencias": "Resistências",
   "T20C5E.CorpoACorpo": "Corpo a corpo",

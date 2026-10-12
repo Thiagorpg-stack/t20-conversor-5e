@@ -2,6 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { existsSync, readFileSync } from 'node:fs';
 import { lerAtor5e, limparTexto5e, quantidadeNoMultiataque } from '../scripts/conversor/origem-json.js';
+import { termosT20 } from '../scripts/conversor/mapeamentos.js';
 import { mediaFormula, formulaDeMedia, aplicarProporcaoExtras } from '../scripts/conversor/dano.js';
 import { criaturaDeFormulario } from '../scripts/conversor/origem-cr.js';
 import { montarDadosAtor } from '../scripts/conversor/criar-ator.js';
@@ -227,6 +228,11 @@ test('Dragão azul real: magias, voo, usos e recarga', { skip: !existsSync(arqui
   assert.deepEqual(e.ataques[0].danoExtra, [{ formula: '1d10', tipo: 'eletricidade' }]);
   assert.equal(e.ataques[0].proporcaoExtra, 0.256); // 2d8+7 (16) e 1d10 (5,5): 5,5 / 21,5
   assert.doesNotMatch(texto('Lightning Breath'), /\[Area/);
+  assert.match(texto('Lightning Breath'), /linha de 27 m de comprimento e 1,5 m de largura/);
+  assert.match(texto('Regional Effects'), /Reflexos CD 15/);
+  assert.equal(e.conjurador, true);
+  assert.equal(e.conjuracao, 'car');
+  assert.equal(e.habilidades.find((h) => h.nome === 'Legendary Resistance').usos, 3);
   assert.equal(e.papel, 'solo');
 });
 
@@ -272,4 +278,26 @@ test('dano adicional entra no balanceamento: segue a proporção da 5e sobre o d
   aplicarProporcaoExtras(dados, criatura, { a: { danoPorGolpe: 61.17 }, b: { danoPorGolpe: 61.17 } });
   assert.equal(dados.items[0].system.rolls[1].parts[2][0], '2d10+6'); // 0,256 × 66,67 ≈ 17
   assert.equal(dados.items[1].system.rolls[0].parts[2][0], '1d10'); // desmarcado: fica fixo
+});
+
+test('termosT20: áreas em metros e alcances curto, médio e longo', () => {
+  assert.equal(termosT20('each creature in a 90-foot-long, 5-foot-wide Line.'), 'each creature in a linha de 27 m de comprimento e 1,5 m de largura.');
+  assert.equal(termosT20('a 30-foot Cone, a 20-foot-radius Sphere, a 15-foot Cube, a 10-foot Emanation'),
+    'a cone de 9 m, a esfera de 6 m de raio, a cubo de 4,5 m de lado, a emanação de 3 m');
+  assert.equal(termosT20('within 30 feet, range 90 ft, 120 ft away, reach 10 ft'), 'within alcance curto, range alcance médio, alcance longo away, reach 3 m');
+  assert.equal(termosT20('fall 2d4 × 10 feet into the sinkhole'), 'fall 2d4 × 10 feet into the sinkhole'); // distância de queda não é alcance
+  assert.equal(termosT20('In a Cone or a Line of Sight'), 'In a cone or a Line of Sight');
+});
+
+test('conjurador: PM = 5 × ND e atributo de conjuração; poder com usos vira contador consumido pelo poder', () => {
+  const e = { ...lerAtor5e(ator5e({ system: { attributes: { movement: { walk: 30, units: 'ft' }, hp: { max: 20 }, spellcasting: 'wis' } } })).estado };
+  assert.equal(e.conjurador, true);
+  assert.equal(e.conjuracao, 'sab');
+  const { criatura } = criaturaDeFormulario({ ...e, ritmo: 't20', nd: '4', habilidades: [{ nome: 'Resist', texto: 'x', usos: 3 }] });
+  const dados = montarDadosAtor(criatura, { nd: '4', gerarId: () => 'id' });
+  assert.equal(dados.system.attributes.pm.max, 20);
+  assert.equal(dados.system.attributes.pm.value, 20);
+  assert.equal(dados.system.attributes.conjuracao, 'sab');
+  assert.deepEqual(dados.system.resources.primary, { value: 3, max: 3, label: 'Resist' });
+  assert.deepEqual(dados.items.find((i) => i.name === 'Resist').system.consume, { amount: 1, mpMultiplier: false, target: 'primary', type: 'attribute' });
 });
