@@ -39,3 +39,21 @@ export function aplicarProporcaoExtras(dados, criatura, danoPorGolpe = {}) {
   }
   return dados;
 }
+
+const ROTULOS_DANO = {
+  acido: 'ácido', corte: 'corte', eletricidade: 'eletricidade', essencia: 'essência', fogo: 'fogo', frio: 'frio', impacto: 'impacto',
+  luz: 'luz', psiquico: 'psíquico', perfuracao: 'perfuração', trevas: 'trevas', perda: 'perda',
+};
+
+// Texto da arma depois do ajuste de ND: troca o bônus de ataque e o dano da 5e ("Attack Roll: +9 ... Hit: 27 (4d10 + 5 Force)
+// damage plus 5 (1d10 Lightning) damage") pelos valores finais da ficha. `partes` = [[fórmula, tipo]] da rolagem de dano.
+// Sem o padrão da 5e no texto, devolve o texto como está.
+export function descricaoDeArma(texto, ataque, partes) {
+  const dano = partes.filter((p) => p[0]).map(([formula, tipo]) => {
+    const rotulo = ROTULOS_DANO[tipo];
+    return `${Math.floor(mediaFormula(formula))} (${formula}${rotulo ? ` de ${rotulo}` : ''}) damage`;
+  });
+  return String(texto)
+    .replace(/(Attack Roll:\s*)\+\d+/i, `$1+${ataque}`)
+    .replace(/Hit:\s*\d+\s*\([^)]*\)\s*damage(?:\s*plus\s*\d+\s*\([^)]*\)\s*damage)*/i, dano.length ? `Hit: ${dano.join(' plus ')}` : '$&');
+}

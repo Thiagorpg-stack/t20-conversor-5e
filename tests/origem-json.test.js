@@ -4,7 +4,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { lerAtor5e, limparTexto5e, quantidadeNoMultiataque } from '../scripts/conversor/origem-json.js';
 import { completarPericiasParciais } from '../scripts/conversor/pericias.js';
 import { termosT20, condicoesT20 } from '../scripts/conversor/mapeamentos.js';
-import { mediaFormula, formulaDeMedia, aplicarProporcaoExtras } from '../scripts/conversor/dano.js';
+import { mediaFormula, formulaDeMedia, aplicarProporcaoExtras, descricaoDeArma } from '../scripts/conversor/dano.js';
 import { criaturaDeFormulario } from '../scripts/conversor/origem-cr.js';
 import { montarDadosAtor } from '../scripts/conversor/criar-ator.js';
 
@@ -343,4 +343,13 @@ test('poderes oficiais: Spellcasting vira "Magias" passivo; vantagem contra magi
 
 test('condicoesT20: nomes das condições da 5e em texto livre viram os do T20', () => {
   assert.equal(condicoesT20('charmed (with Mind Blank); Poisoned, prone'), 'enfeitiçado (with Mind Blank); Envenenado, caído'.replace('Envenenado', 'envenenado'));
+});
+
+test('descricaoDeArma: bônus e dano da 5e viram os valores finais da ficha', () => {
+  const rend = '<p>Rend. Melee Attack Roll: +12, reach 3 m. Hit: 16 (2d8 + 7 Slashing) damage plus 5 (1d10 Lightning) damage.</p>';
+  assert.equal(descricaoDeArma(rend, 46, [['4d6+36', 'corte', ''], ['2d10+6', 'eletricidade', '']]),
+    '<p>Rend. Melee Attack Roll: +46, reach 3 m. Hit: 50 (4d6+36 de corte) damage plus 17 (2d10+6 de eletricidade) damage.</p>');
+  assert.equal(descricaoDeArma('Melee or Ranged Attack Roll: +9, range alcance longo. Hit: 27 (4d10 + 5 Force) damage.', 34, [['3d6+26', 'essencia', '']]),
+    'Melee or Ranged Attack Roll: +34, range alcance longo. Hit: 36 (3d6+26 de essência) damage.');
+  assert.equal(descricaoDeArma('Sem padrão.', 34, [['1d6', 'corte', '']]), 'Sem padrão.');
 });
