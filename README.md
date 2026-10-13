@@ -4,7 +4,7 @@ Módulo para Foundry VTT que converte criaturas de **D&D 5e** em ameaças de **T
 
 > **Status: v0.4.2 (em teste).** v2, "Importar JSON de 5e", estão implementadas. A v3 (texto colado) está em fase de testes.
 
-Exige o Ajustar ND 0.10.0.
+Exige o Ajustar ND 0.10.2.
 
 *English: Foundry VTT module that converts D&D 5e creatures into Tormenta20 threats, using the per-ND and per-role parameter tables.*
 
@@ -26,7 +26,7 @@ Exige o Ajustar ND 0.10.0.
 - **Ao criar o ator**, os atributos das perícias voltam aos da regra e o ajuste de ND roda duas vezes, para o que a ficha mostra bater com a tabela.
 - Calcula o ND com uma **calibração de ritmo**: um grupo de T20 aguenta 1 a 2 combates do seu ND por descanso, e em 5e o dia de aventura espera 6 a 8. O mestre informa o nível do grupo e o ritmo desejado.
 
-## Como usar (v1)
+## Como usar (v2)
 
 1. Como Mestre, abra o diretório de atores e clique em **5e para T20**.
 2. Importar o JSON de um ator de 5e exportado de outro mundo.
