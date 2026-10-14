@@ -2,6 +2,9 @@
 
 Módulo para Foundry VTT que converte criaturas de **D&D 5e** em ameaças de **Tormenta20**, usando as tabelas por ND e papel (Solo, Lacaio ou Especial) e o motor do módulo **Ajustar ND**.
 
+[![Video Title](https://img.youtube.com/vi/oGsEAPHrdFo/0.jpg)](https://www.youtube.com/watch?v=oGsEAPHrdFo)
+[![Video Title](https://img.youtube.com/vi/30FP5qsoHQs/0.jpg)](https://www.youtube.com/watch?v=30FP5qsoHQs)
+
 > **Status: v0.4.2 (em teste).** v2, "Importar JSON de 5e", estão implementadas. A v3 (texto colado) está em fase de testes.
 
 Exige o Ajustar ND 0.10.2.
