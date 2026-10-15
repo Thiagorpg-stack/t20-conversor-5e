@@ -1,4 +1,4 @@
-// 5e para T20 — ponto de entrada. Depende do módulo Ajustar ND (0.9.0 ou mais recente).
+// 5e para T20 — ponto de entrada. Depende do módulo Ajustar ND (0.10.0 ou mais recente).
 import { ID_CONVERSOR } from './conversor/criar-ator.js';
 import { abrirConversor } from './dialogo-conversor.js';
 import { completarPericiasParciais } from './conversor/pericias.js';

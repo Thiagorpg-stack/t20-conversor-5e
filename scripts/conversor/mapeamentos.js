@@ -212,7 +212,8 @@ const juntar = (itens) => (itens.length > 1 ? `${itens.slice(0, -1).join(', ')} 
 const maiuscula = (palavra) => palavra[0].toUpperCase() + palavra.slice(1);
 
 export function trocarSalvaguardaPt(texto) {
-  const salvaguarda = new RegExp(String.raw`(?:\b(uma|numa|nas?|das?|pelas?|às|as?)\s+)?\b(salvaguardas?)\b(?: de (${LISTA_ATRIBUTO_PT}))?`, 'gi');
+  // O `\b` não vê o "à" como letra, então o artigo vem de um lookbehind Unicode (flag `u`).
+  const salvaguarda = new RegExp(String.raw`(?:(?<![\p{L}])(uma|numa|nas?|das?|pelas?|às|as?)\s+)?\b(salvaguardas?)\b(?: de (${LISTA_ATRIBUTO_PT}))?`, 'giu');
   const testeDeResistencia = new RegExp(String.raw`\b(testes? de resistência) de (${LISTA_ATRIBUTO_PT})`, 'gi');
   return String(texto ?? '')
     .replace(salvaguarda, (_, artigo, nome, lista) => {

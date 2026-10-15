@@ -65,7 +65,7 @@ export function criaturaDeFormulario(f) {
   if (!CODIGOS_TAMANHO.includes(f.tamanho)) erros.push('tamanho');
   if (!CODIGOS_TIPO.includes(f.tipo)) erros.push('tipo');
 
-  const deslocamento = Number(f.deslocamento ?? 9);
+  const deslocamento = f.deslocamento === '' ? 9 : Number(f.deslocamento ?? 9); // campo apagado na tela volta ao padrão, não a 0 m
   if (!(deslocamento >= 0)) erros.push('deslocamento');
 
   const deslocamentosExtra = Object.fromEntries(['fly', 'swim', 'climb', 'burrow']

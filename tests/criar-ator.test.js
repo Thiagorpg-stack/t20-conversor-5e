@@ -44,6 +44,11 @@ test('formulário válido vira criatura neutra', () => {
   assert.equal(c.ataques[1].distancia, true);
 });
 
+test('deslocamento apagado na tela volta a 9 m, não a 0', () => {
+  const r = criaturaDeFormulario(formulario({ deslocamento: '' }));
+  assert.equal(r.criatura.deslocamento, 9);
+});
+
 test('nível do grupo não existe mais: um valor solto no formulário é ignorado, sem erro', () => {
   const r = criaturaDeFormulario(formulario({ nivelGrupo: '99' }));
   assert.equal(r.ok, true);

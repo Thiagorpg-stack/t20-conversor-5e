@@ -5,7 +5,8 @@ import { calcularND, linhaDoND, RITMOS } from './conversor/ritmo.js';
 import { lerAtor5e } from './conversor/origem-json.js';
 import { textoParaAtor5e } from './conversor/origem-texto.js';
 import { itemExtraDe } from './conversor/itens-extras.js';
-import { PASTA_IMAGENS, nomeDoArquivo, ehUrl, tokenDoCdn5e, urlsCandidatas } from './conversor/imagem.js';
+import { ehUrl, tokenDoCdn5e } from './conversor/imagem.js';
+import { PREFIXO_IMAGEM, imagemAbre, guardarImagem, trazerDaUrl } from './imagem-foundry.js';
 import { papelDoSistema, ndDeReferencia, CODIGOS_TAMANHO, CODIGOS_TIPO, CHAVES_DANO, NOME_DA_PERICIA } from './conversor/mapeamentos.js';
 import { criaturaDeFormulario, aplicarModoAtaques, poderDaTela, MODOS_ATAQUES, EXECUCOES, ATRIBUTOS } from './conversor/origem-cr.js';
 import { montarDadosAtor, ataquesPorArmaDe, ID_CONVERSOR, NOME_PASTA } from './conversor/criar-ator.js';
@@ -27,35 +28,6 @@ const NOMES_ATRIBUTO = { for: 'FOR', des: 'DES', con: 'CON', int: 'INT', sab: 'S
 const CAMPOS_QUE_RECALCULAM_ND = ['cr', 'papel', 'ritmo'];
 
 const t = (chave) => game.i18n.localize(chave);
-
-const PREFIXO_IMAGEM = { img: 'retrato', token: 'token' };
-
-// Plano B quando o `fetch` é bloqueado (o Foundry pode restringir conexões, mas deixa carregar imagens):
-// carrega como imagem com CORS e redesenha num canvas. Só serve a sites que liberam CORS; sai em WebP sem perdas.
-const baixarComoImagem = (url) => new Promise((resolve, reject) => {
-  const img = new Image();
-  img.crossOrigin = 'anonymous';
-  img.onerror = () => reject(new Error('a imagem não carrega com CORS'));
-  img.onload = () => {
-    try {
-      const canvas = document.createElement('canvas');
-      canvas.width = img.naturalWidth;
-      canvas.height = img.naturalHeight;
-      canvas.getContext('2d').drawImage(img, 0, 0);
-      canvas.toBlob((blob) => (blob ? resolve(blob) : reject(new Error('canvas vazio'))), 'image/webp', 1);
-    } catch (erro) { reject(erro); } // canvas "sujo" (sem CORS) lança SecurityError
-  };
-  img.src = `${url}${url.includes('?') ? '&' : '?'}cors=${Date.now()}`; // outra URL: ignora a cópia em cache sem CORS
-});
-
-// A imagem do arquivo (URL ou caminho de outro mundo) só entra se abrir aqui.
-const imagemAbre = (src) => new Promise((resolve) => {
-  const img = new Image();
-  const espera = setTimeout(() => resolve(false), 5000);
-  img.onload = () => { clearTimeout(espera); resolve(true); };
-  img.onerror = () => { clearTimeout(espera); resolve(false); };
-  img.src = src;
-});
 
 export class DialogoConversor extends HandlebarsApplicationMixin(ApplicationV2) {
   static DEFAULT_OPTIONS = {
@@ -102,6 +74,7 @@ export class DialogoConversor extends HandlebarsApplicationMixin(ApplicationV2) 
     };
     this.relatorio = []; // da última importação: [{ tipo: 'ok' | 'revisar' | 'ignorado', texto }]
     this.pronto = null; // { dados, criatura, ndFinal, opcoes }
+    this.criando = false; // trava o clique duplo em "Criar"
     this.tocado = false; // só mostra erros de validação depois da primeira edição do mestre
   }
 
@@ -340,7 +313,7 @@ export class DialogoConversor extends HandlebarsApplicationMixin(ApplicationV2) 
         if (!arquivo) return;
         try {
           const campoImagem = ev.target.dataset.enviar;
-          this.estado[campoImagem] = await this.#guardarImagem(new File([arquivo], `${PREFIXO_IMAGEM[campoImagem]}-${arquivo.name}`, { type: arquivo.type }));
+          this.estado[campoImagem] = await guardarImagem(new File([arquivo], `${PREFIXO_IMAGEM[campoImagem]}-${arquivo.name}`, { type: arquivo.type }));
         } catch (erro) {
           console.error(`${ID_CONVERSOR} |`, erro);
           ui.notifications.error(`${t('T20C5E.ErroEnviarImagem')}: ${erro.message}`);
@@ -348,67 +321,6 @@ export class DialogoConversor extends HandlebarsApplicationMixin(ApplicationV2) 
         await this.render();
       });
     });
-  }
-
-  // Grava a imagem na pasta do módulo (em Data) e devolve o caminho. Precisa da permissão de enviar arquivos.
-  async #guardarImagem(arquivo) {
-    const FilePicker = foundry.applications.apps.FilePicker.implementation;
-    let caminho = '';
-    for (const parte of PASTA_IMAGENS.split('/')) { // cria a pasta passo a passo; se já existe, segue
-      caminho = caminho ? `${caminho}/${parte}` : parte;
-      await FilePicker.createDirectory('data', caminho).catch((erro) => {
-        if (!/exist/i.test(erro.message)) console.warn(`${ID_CONVERSOR} | criar pasta ${caminho}:`, erro);
-      });
-    }
-    const resposta = await FilePicker.upload('data', PASTA_IMAGENS, arquivo, {});
-    // O Foundry devolve {} sem explicar quando o envio falha por dentro, e false quando já mostrou o erro.
-    if (!resposta?.path) throw new Error(resposta?.message ?? t('T20C5E.ErroUploadSemResposta'));
-    return resposta.path;
-  }
-
-  // Baixa uma URL (o pedido sai do navegador, então o site precisa permitir CORS) e devolve o File.
-  async #baixarArquivo(url, campo) {
-    let blob;
-    let nome;
-    try {
-      // cache "reload": a mesma URL já carregada como <img> fica no cache sem o cabeçalho de CORS e quebraria este pedido
-      const resposta = await fetch(url, { cache: 'reload' });
-      if (!resposta.ok) throw new Error(`HTTP ${resposta.status}`);
-      blob = await resposta.blob();
-      if (!blob.type.startsWith('image/')) throw new Error(t('T20C5E.ErroNaoImagem'));
-      nome = nomeDoArquivo(url, blob.type);
-    } catch (erroFetch) {
-      if (/^HTTP 4\d\d$/.test(erroFetch.message)) throw erroFetch; // o site respondeu: o endereço não existe, não adianta o plano B
-      try {
-        blob = await baixarComoImagem(url);
-      } catch (erroImagem) {
-        throw new Error(`${erroFetch.message}; ${erroImagem.message}`, { cause: erroImagem });
-      }
-      nome = nomeDoArquivo(url).replace(/\.\w{2,5}$/, '.webp'); // o canvas sempre devolve WebP
-    }
-    return new File([blob], `${PREFIXO_IMAGEM[campo]}-${nome}`, { type: blob.type });
-  }
-
-  // Baixa a imagem da URL e guarda no Foundry; devolve o caminho.
-  // `campo` ('img' ou 'token') vira prefixo do nome: o retrato e o token do 5e.tools têm o mesmo nome de arquivo.
-  async #trazerDaUrl(url, campo) {
-    let arquivo;
-    let ultimoErro;
-    for (const candidata of urlsCandidatas(url)) { // 5e.tools: tenta antes o equivalente no CDN, que libera CORS
-      try {
-        arquivo = await this.#baixarArquivo(candidata, campo);
-        break;
-      } catch (erro) {
-        console.warn(`${ID_CONVERSOR} | não baixou ${candidata}:`, erro);
-        ultimoErro = erro;
-      }
-    }
-    if (!arquivo) throw new Error(`${t('T20C5E.EtapaBaixar')}: ${ultimoErro.message}`, { cause: ultimoErro });
-    try {
-      return await this.#guardarImagem(arquivo);
-    } catch (erro) {
-      throw new Error(`${t('T20C5E.EtapaGuardar')}: ${erro.message}`, { cause: erro });
-    }
   }
 
   // Lê o JSON de um ator de 5e e preenche o formulário; o que não é importado fica como está.
@@ -520,7 +432,7 @@ export class DialogoConversor extends HandlebarsApplicationMixin(ApplicationV2) 
     const url = String(this.estado[campo] ?? '').trim();
     if (!ehUrl(url)) { ui.notifications.warn(t('T20C5E.AvisoSemUrl')); return; }
     try {
-      this.estado[campo] = await this.#trazerDaUrl(url, campo);
+      this.estado[campo] = await trazerDaUrl(url, campo);
       ui.notifications.info(game.i18n.format('T20C5E.ImagemSalva', { caminho: this.estado[campo] }));
     } catch (erro) {
       console.error(`${ID_CONVERSOR} |`, erro);
@@ -597,14 +509,21 @@ export class DialogoConversor extends HandlebarsApplicationMixin(ApplicationV2) 
     if (mudancas.length) await ator.updateEmbeddedDocuments('Item', mudancas);
   }
 
+  // Um segundo clique durante a criação (baixar imagens, duas passadas do Ajustar ND) criaria outro ator.
   static async #criar() {
+    if (this.criando) return;
+    this.criando = true;
+    try { await this.#criarAtor(); } finally { this.criando = false; }
+  }
+
+  async #criarAtor() {
     this.#lerFormulario();
     // O ator não fica com link remoto: o navegador e módulos como o Tokenizer só carregam imagens que o site libera (CORS).
     for (const campo of ['img', 'token']) {
       const url = String(this.estado[campo] ?? '').trim();
       if (!ehUrl(url)) continue;
       try {
-        this.estado[campo] = await this.#trazerDaUrl(url, campo);
+        this.estado[campo] = await trazerDaUrl(url, campo);
       } catch (erro) {
         console.error(`${ID_CONVERSOR} |`, erro);
         ui.notifications.warn(`${t('T20C5E.AvisoImagemFicouUrl')} (${erro.message}) ${t('T20C5E.DicaBaixar')}`);
@@ -628,8 +547,6 @@ export class DialogoConversor extends HandlebarsApplicationMixin(ApplicationV2) 
         });
         await api.aplicarAjuste(ator, resultado, { copiar: false });
         if (passada === 1) await this.#atualizarTextoDasArmas(ator);
-        console.info(`${ID_CONVERSOR} | perícias após a passada ${passada + 1}: ${['luta', 'fort', 'refl', 'vont']
-          .map((k) => `${k}=${ator.system.pericias[k].atributo}/outros ${ator.system.pericias[k].outros}/total ${ator.system.pericias[k].value}`).join('; ')}`);
       }
     } catch (erro) {
       console.error(`${ID_CONVERSOR} |`, erro);

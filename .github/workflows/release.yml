@@ -13,6 +13,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Rodar os testes
+        run: node --test
+
       - name: Preencher versão e links no module.json
         run: |
           VERSAO="${GITHUB_REF_NAME#v}"

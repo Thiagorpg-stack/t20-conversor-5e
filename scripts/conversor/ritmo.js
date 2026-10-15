@@ -1,7 +1,7 @@
 // Calibração de ritmo. Função pura, sem dependência do Foundry.
 //
-// Q alvo = Q(L) × (1,5 ÷ k) × ρ, com Q = Dano × PV da linha da tabela do papel.
-//   L = nível do grupo; k = combates até o descanso; ρ = XP(CR) ÷ XP(L).
+// Q alvo = Q(ND de referência) × (1,5 ÷ k), com Q = Dano × PV da linha da tabela do papel e
+// k = combates até o descanso.
 // O ND escolhido é o da tabela do papel cuja Q fica mais perto de Q alvo (escala logarítmica).
 import { valorND, parseCR, ndDeReferencia } from './mapeamentos.js';
 
@@ -28,9 +28,6 @@ export function xpDoCR(cr) {
 
 export const custoQ = (linha) => linha.Dano * linha.PV;
 
-// Criaturas iguais que o grupo mata uma por vez: custo proporcional a N(N+1)/2.
-export const fatorGrupo = (n) => (n * (n + 1)) / 2;
-
 export function linhaDoND(linhas, nd) {
   const alvo = valorND(nd);
   const linha = linhas.find((l) => valorND(l.ND) === alvo);
@@ -54,8 +51,7 @@ function valorDoRitmo(ritmo) {
 }
 
 // tabelas: { solo: [...], lacaio: [...], especial: [...] } (formato do tables.json do Ajustar ND).
-// Sem nivelGrupo: usa o ND de referência do CR como nível, com ρ = 1.
-export function calcularND({ tabelas, papel, cr, nivelGrupo, ritmo = 't20' }) {
+export function calcularND({ tabelas, papel, cr, ritmo = 't20' }) {
   const chave = CHAVE_TABELA[papel];
   if (!chave) throw new Error(`Papel desconhecido: "${papel}"`);
   const linhas = tabelas[chave];
@@ -69,19 +65,7 @@ export function calcularND({ tabelas, papel, cr, nivelGrupo, ritmo = 't20' }) {
     return { nd: ndReferencia, ndReferencia, usouFormula: false, motivo: 'cr-acima-de-20', k };
   }
 
-  let linhaBase;
-  let rho;
-  let nivel = null;
-  if (nivelGrupo === undefined || nivelGrupo === null) {
-    linhaBase = linhaDoND(linhas, ndReferencia);
-    rho = 1;
-  } else {
-    nivel = Math.min(20, Math.max(1, Math.round(nivelGrupo)));
-    linhaBase = linhaDoND(linhas, nivel);
-    rho = xpDoCR(crNumero) / xpDoCR(nivel);
-  }
-
-  const qAlvo = custoQ(linhaBase) * (FATOR_T20 / k) * rho;
+  const qAlvo = custoQ(linhaDoND(linhas, ndReferencia)) * (FATOR_T20 / k);
   const escolhida = escolherNDPorQ(linhas, qAlvo);
-  return { nd: String(escolhida.ND), ndReferencia, usouFormula: true, qAlvo, k, rho, nivelGrupo: nivel };
+  return { nd: String(escolhida.ND), ndReferencia, usouFormula: true, qAlvo, k };
 }

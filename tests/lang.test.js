@@ -17,6 +17,7 @@ test('lang: todo texto usado no template e no código existe', () => {
   const usadas = new Set([
     ...[...ler('../templates/dialogo-conversor.hbs').matchAll(/(?:localize|T20C5E\.)\s*["']?(T20C5E\.[\w.]+)/g)].map((m) => m[1]),
     ...[...ler('../scripts/dialogo-conversor.js').matchAll(/['"`](T20C5E\.[\w.]+)['"`]/g)].map((m) => m[1]),
+    ...[...ler('../scripts/imagem-foundry.js').matchAll(/['"`](T20C5E\.[\w.]+)['"`]/g)].map((m) => m[1]),
     ...[...ler('../scripts/main.js').matchAll(/['"`](T20C5E\.[\w.]+)['"`]/g)].map((m) => m[1]),
     ...[...ler('../scripts/conversor/origem-texto.js').matchAll(/['"`](T20C5E\.[\w.]+)['"`]/g)].map((m) => m[1]),
   ]);

@@ -7,7 +7,7 @@ Módulo para Foundry VTT que converte criaturas de **D&D 5e** em ameaças de **T
 
 > **Status: v0.6.0 (em teste).** A v1, "Criar ameaça a partir de CR", a v2, "Importar JSON de 5e", e a v3, "Colar bloco de estatísticas", estão implementadas.
 
-Exige o Ajustar ND 0.10.2.
+Exige o Ajustar ND 0.10.0 ou mais recente.
 
 *English: Foundry VTT module that converts D&D 5e creatures into Tormenta20 threats, using the per-ND and per-role parameter tables.*
 

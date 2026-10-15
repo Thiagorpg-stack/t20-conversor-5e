@@ -107,6 +107,7 @@ test('trocarSalvaguardaPt: "salvaguarda" vira teste de resistência e o atributo
   assert.equal(t('deve ser bem-sucedido em uma salvaguarda de Destreza CD 13'), 'deve ser bem-sucedido em um teste de Reflexos CD 13');
   assert.equal(t('Se o aboleth falhar em uma salvaguarda, ele pode escolher ter sucesso.'), 'Se o aboleth falhar em um teste de resistência, ele pode escolher ter sucesso.');
   assert.equal(t('Sucesso na salvaguarda e as salvaguardas da criatura'), 'Sucesso no teste de resistência e os testes de resistência da criatura');
+  assert.equal(t('Faça às salvaguardas de Destreza'), 'Faça aos testes de Reflexos');
   assert.equal(t('vantagem em salvaguardas contra magias'), 'vantagem em testes de resistência contra magias');
   // lista de atributos: as categorias se juntam
   assert.equal(t('Vantagem em salvaguardas de Inteligência, Sabedoria e Carisma contra magia.'), 'Vantagem em testes de Vontade contra magia.');
