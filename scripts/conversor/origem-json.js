@@ -2,7 +2,7 @@
 // campos do formulário e um relatório do que foi importado, do que pede revisão e do que ficou de fora.
 import {
   modificadorAtributo, pesParaMetros, mapearTamanho, mapearTipo, mapearTipoDano, ndDeReferencia, parseCR, trocarDCporCD,
-  trocarTesteResistencia, termosT20, condicoesT20, areaT20, periciaDoAtributo5e, ehAtributoPadraoDeVontade, NOME_DA_PERICIA,
+  trocarTesteResistencia, trocarSalvaguardaPt, termosT20, condicoesT20, areaT20, periciaDoAtributo5e, ehAtributoPadraoDeVontade, NOME_DA_PERICIA,
 } from './mapeamentos.js';
 import { sugerirPapel } from './papel.js';
 import { mediaFormula } from './dano.js';
@@ -187,7 +187,7 @@ const execucaoDe = (item) => {
 };
 
 // Descrição da 5e em texto T20: sem HTML, "DC" vira "CD" e "Constitution Saving Throw" vira "Fortitude".
-const textoT20 = (html, nomesPorId) => termosT20(trocarDCporCD(trocarTesteResistencia(limparTexto5e(html, nomesPorId))));
+const textoT20 = (html, nomesPorId) => termosT20(trocarDCporCD(trocarSalvaguardaPt(trocarTesteResistencia(limparTexto5e(html, nomesPorId)))));
 
 const PERIODOS = { day: 'dia', lr: 'descanso longo', sr: 'descanso curto', dawn: 'amanhecer', dusk: 'anoitecer' };
 

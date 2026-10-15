@@ -321,3 +321,9 @@ Termos do site: rótulo `Movimento` (não "Deslocamento"), `nado`, `escavação`
 O que só apareceu nas fichas reais: o "(10 ft)" depois dos metros faria o `termosT20` da v2 converter de novo; "Pequeno ou Médio" fica com o maior; "Ataque Múltiplo (Só na Forma de Vampiro)" tem de ser reconhecido como Multiataque e o nome do ataque é procurado sem a condição entre parênteses. A maioria dos "Multiataque não cita" que sobra é legítima: o texto chama o ataque por outro nome ("ataques de pancada" contra um ataque "Golpe").
 
 Não adotado: o termo "corruptor" (Galápagos) e "percepção às cegas" ficam como sinônimos, mas o site usa `ínfero` e `visão às cegas`.
+
+### 13.2 Teste de resistência e cura (0.5.2)
+
+- No Tormenta20 **"salvaguarda" é "teste de resistência"** e todo teste é Fortitude, Reflexos ou Vontade. A tabela atributo → categoria (`periciaDoAtributo5e`) passou a levar **Força para Fortitude** (antes ia para Atletismo, que não é teste de resistência). O texto dos poderes em português passa por `trocarSalvaguardaPt`: "Salvaguarda de Constituição: CD 14" → "Teste de Fortitude: CD 14"; "uma salvaguarda" → "um teste de resistência" (o artigo concorda com "teste"); "salvaguardas de Inteligência, Sabedoria e Carisma" → "testes de Vontade"; o "teste de resistência de Destreza" da tradução antiga → "teste de Reflexos". Vale também para o JSON em português (passa pelo mesmo `textoT20`).
+- Num teste com 126 trocas em 150 fichas do Pocket DM não sobrou nenhum "salvaguarda".
+- **Cura não é dano:** "recupera 5 (1d10) Pontos de Vida" / "regains 4 (1d8) hit points" (e a versão "temporários") não entra nas rolagens de dano do poder; antes virava uma rolagem "Dano" marcada para o Ajustar ND recalcular.
