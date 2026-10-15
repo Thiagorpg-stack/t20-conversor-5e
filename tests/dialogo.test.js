@@ -276,7 +276,8 @@ test('sem o nome da criatura o ND já é calculado e mostrado (referência, cali
 });
 
 test('o diálogo preserva a rolagem da janela ao se redesenhar', () => {
-  assert.deepEqual(DialogoConversor.PARTS.corpo.scrollable, ['.conversor']);
+  // O elemento da parte já é a <section class="conversor"> que rola: seletor vazio = a própria parte (um seletor filho não a acharia).
+  assert.deepEqual(DialogoConversor.PARTS.corpo.scrollable, ['']);
 });
 
 // Soltar poder ou magia na janela: o Foundry entrega { type: 'Item', uuid }, que o diálogo resolve com fromUuid.
@@ -325,4 +326,18 @@ test('"remover" tira o item arrastado pelo índice, sem mexer nos outros', async
   await DialogoConversor.DEFAULT_OPTIONS.actions.removerItemExtra.call(d, null, { dataset: { indice: '0' } });
   assert.deepEqual(d.estado.itensExtras.map((i) => i.name), ['B']);
   assert.equal((await d._prepareContext()).itensExtras[0].nome, 'B');
+});
+
+test('o ND calibrado igual ao de referência é avisado como esperado; com outro ritmo o ND muda', async () => {
+  const d = new DialogoConversor();
+  Object.assign(d.estado, { nome: 'Lobo', cr: '5', nivelGrupo: 3, papel: 'solo', ritmo: 't20' });
+  const igual = await d._prepareContext();
+  assert.deepEqual([igual.referencia, igual.calibrado, igual.calibradoIgual], ['5', '5', true]); // ritmo T20: ND perto do CR
+  d.estado.ritmo = 'estilo5e';
+  d.estado.ndManual = false;
+  const outro = await d._prepareContext();
+  assert.deepEqual([outro.referencia, outro.calibrado, outro.calibradoIgual], ['5', '2', false]);
+  d.estado.nivelGrupo = '';
+  d.estado.ritmo = 't20';
+  assert.equal((await d._prepareContext()).calibradoIgual, false); // sem nível não há calibragem a comparar
 });

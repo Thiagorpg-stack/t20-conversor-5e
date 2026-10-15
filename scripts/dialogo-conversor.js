@@ -82,7 +82,8 @@ export class DialogoConversor extends HandlebarsApplicationMixin(ApplicationV2) 
   };
 
   // `scrollable`: o Foundry guarda e devolve a rolagem da janela quando ela se redesenha (senão voltaria ao topo a cada clique).
-  static PARTS = { corpo: { template: `modules/${ID_CONVERSOR}/templates/dialogo-conversor.hbs`, scrollable: ['.conversor'] } };
+  // O elemento da parte já é a <section class="conversor"> que rola, então o seletor é vazio (a própria parte).
+  static PARTS = { corpo: { template: `modules/${ID_CONVERSOR}/templates/dialogo-conversor.hbs`, scrollable: [''] } };
 
   constructor(options = {}) {
     super(options);
@@ -224,6 +225,7 @@ export class DialogoConversor extends HandlebarsApplicationMixin(ApplicationV2) 
     ctx.referencia = p.ndReferencia;
     ctx.calibrado = p.calculo.nd;
     ctx.usouFormula = p.calculo.usouFormula;
+    ctx.calibradoIgual = p.calculo.nivelGrupo != null && p.calculo.nd === p.ndReferencia; // com nível e o ND não saiu do lugar: é o esperado no ritmo T20
     ctx.ndManual = e.ndManual && p.ndFinal !== p.calculo.nd;
 
     try {
