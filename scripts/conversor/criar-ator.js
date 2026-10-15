@@ -144,7 +144,7 @@ export function montarDadosAtor(criatura, { nd, gerarId, pasta = null, ndReferen
 
   dados.flags = {
     [ID_CONVERSOR]: {
-      origem: 'cr', cr: criatura.cr, ritmo: criatura.ritmo, nivelGrupo: criatura.nivelGrupo,
+      origem: 'cr', cr: criatura.cr, ritmo: criatura.ritmo,
       ndReferencia, criadoEm: agora,
     },
   };

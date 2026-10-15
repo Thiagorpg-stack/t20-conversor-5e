@@ -4,12 +4,6 @@ import { abrirConversor } from './dialogo-conversor.js';
 import { completarPericiasParciais } from './conversor/pericias.js';
 
 Hooks.once('init', () => {
-  game.settings.register(ID_CONVERSOR, 'nivelGrupo', {
-    name: 'T20C5E.ConfigNivelNome',
-    hint: 'T20C5E.ConfigNivelDica',
-    scope: 'world', config: true, type: Number, default: 0,
-    range: { min: 0, max: 20, step: 1 },
-  });
   game.settings.register(ID_CONVERSOR, 'ritmo', {
     name: 'T20C5E.ConfigRitmoNome',
     hint: 'T20C5E.ConfigRitmoDica',

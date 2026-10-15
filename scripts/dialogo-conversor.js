@@ -24,7 +24,7 @@ const NOMES_DANO = {
 };
 const TESTES = { fort: 'Fortitude', refl: 'Reflexos', vont: 'Vontade' };
 const NOMES_ATRIBUTO = { for: 'FOR', des: 'DES', con: 'CON', int: 'INT', sab: 'SAB', car: 'CAR' };
-const CAMPOS_QUE_RECALCULAM_ND = ['cr', 'papel', 'nivelGrupo', 'ritmo'];
+const CAMPOS_QUE_RECALCULAM_ND = ['cr', 'papel', 'ritmo'];
 
 const t = (chave) => game.i18n.localize(chave);
 
@@ -74,7 +74,6 @@ export class DialogoConversor extends HandlebarsApplicationMixin(ApplicationV2) 
       importar5e: DialogoConversor.#importar5e,
       importarTexto: DialogoConversor.#lerTexto,
       alternarTexto: DialogoConversor.#alternarTexto,
-      alternarCalibragem: DialogoConversor.#alternarCalibragem,
       removerItemExtra: DialogoConversor.#removerItemExtra,
       addPoder: DialogoConversor.#addPoder,
       removerPoder: DialogoConversor.#removerPoder,
@@ -87,9 +86,8 @@ export class DialogoConversor extends HandlebarsApplicationMixin(ApplicationV2) 
 
   constructor(options = {}) {
     super(options);
-    const nivelPadrao = Number(game.settings.get(ID_CONVERSOR, 'nivelGrupo')) || '';
     this.estado = {
-      nome: '', conceito: '', img: '', token: '', texto5e: '', textoAberto: false, calibrarAberto: Number(nivelPadrao) > 0, itensExtras: [], cr: '5', papel: 'solo', nivelGrupo: nivelPadrao,
+      nome: '', conceito: '', img: '', token: '', texto5e: '', textoAberto: false, itensExtras: [], cr: '5', papel: 'solo',
       ritmo: game.settings.get(ID_CONVERSOR, 'ritmo'),
       nd: null, ndManual: false, chefeFinal: false, conjurador: false, conjuracao: 'int',
       tamanho: 'med', tipo: 'mon', deslocamento: 9,
@@ -121,14 +119,14 @@ export class DialogoConversor extends HandlebarsApplicationMixin(ApplicationV2) 
       const erros = validacao.erros.map((c) => this.#erroLegivel(c));
       const base = validacao.parametrosND;
       if (!base) return { erros };
-      const calculo = calcularND({ tabelas, papel: base.papel, cr: base.cr, nivelGrupo: base.nivelGrupo ?? undefined, ritmo: base.ritmo });
+      const calculo = calcularND({ tabelas, papel: base.papel, cr: base.cr, ritmo: base.ritmo });
       if (!e.ndManual || !e.nd) e.nd = calculo.nd;
       return { erros, calculo, ndReferencia: ndDeReferencia(base.cr) };
     }
 
     const calculo = calcularND({
       tabelas, papel: validacao.criatura.papel, cr: validacao.criatura.cr,
-      nivelGrupo: validacao.criatura.nivelGrupo ?? undefined, ritmo: validacao.criatura.ritmo,
+      ritmo: validacao.criatura.ritmo,
     });
     const ndFinal = e.ndManual && e.nd ? e.nd : calculo.nd;
     e.nd = ndFinal;
@@ -164,8 +162,7 @@ export class DialogoConversor extends HandlebarsApplicationMixin(ApplicationV2) 
   async _prepareContext() {
     const e = this.estado;
     const ctx = {
-      e, calibrarVisivel: e.calibrarAberto,
-      papeis: PAPEIS.map(([v, r]) => ({ valor: v, rotulo: r, selecionado: v === e.papel })),
+      e, papeis: PAPEIS.map(([v, r]) => ({ valor: v, rotulo: r, selecionado: v === e.papel })),
       ritmos: Object.keys(RITMOS).map((v) => ({ valor: v, rotulo: NOMES_RITMO[v], selecionado: v === e.ritmo })),
       tamanhos: CODIGOS_TAMANHO.map((v) => ({ valor: v, rotulo: NOMES_TAMANHO[v], selecionado: v === e.tamanho })),
       tipos: CODIGOS_TIPO.map((v) => ({ valor: v, rotulo: NOMES_TIPO[v], selecionado: v === e.tipo })),
@@ -225,7 +222,6 @@ export class DialogoConversor extends HandlebarsApplicationMixin(ApplicationV2) 
     ctx.referencia = p.ndReferencia;
     ctx.calibrado = p.calculo.nd;
     ctx.usouFormula = p.calculo.usouFormula;
-    ctx.calibradoIgual = p.calculo.nivelGrupo != null && p.calculo.nd === p.ndReferencia; // com nível e o ND não saiu do lugar: é o esperado no ritmo T20
     ctx.ndManual = e.ndManual && p.ndFinal !== p.calculo.nd;
 
     try {
@@ -287,7 +283,6 @@ export class DialogoConversor extends HandlebarsApplicationMixin(ApplicationV2) 
     e.texto5e = valor('texto5e') ?? e.texto5e;
     e.cr = valor('cr') ?? e.cr;
     e.papel = valor('papel') ?? e.papel;
-    e.nivelGrupo = valor('nivelGrupo') ?? e.nivelGrupo;
     e.ritmo = valor('ritmo') ?? e.ritmo;
     e.tamanho = valor('tamanho') ?? e.tamanho;
     e.tipo = valor('tipo') ?? e.tipo;
@@ -507,12 +502,6 @@ export class DialogoConversor extends HandlebarsApplicationMixin(ApplicationV2) 
   static async #alternarTexto() {
     this.#lerFormulario();
     this.estado.textoAberto = !this.estado.textoAberto;
-    await this.render();
-  }
-
-  static async #alternarCalibragem() {
-    this.#lerFormulario();
-    this.estado.calibrarAberto = !this.estado.calibrarAberto;
     await this.render();
   }
 

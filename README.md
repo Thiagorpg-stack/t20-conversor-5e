@@ -29,16 +29,16 @@ Exige o Ajustar ND 0.10.2.
 - **Texto das armas**: depois do ajuste de ND, a descrição da arma troca o bônus de ataque e o dano da 5e ("Attack Roll: +12 ... Hit: 16 (2d8 + 7 Slashing) damage") pelos valores finais da ficha. Só na criação: um ajuste de ND posterior não reescreve a descrição.
 - **Perícias protegidas**: no Tormenta20 1.6.6 (Foundry 14), atualizar um campo de uma perícia a redefine para o padrão (atributo FOR, outros 0); o formulário da ficha faz isso ao fechá-la. Nos atores criados por este módulo as atualizações são completadas com os valores atuais.
 - **Ao criar o ator**, os atributos das perícias voltam aos da regra e o ajuste de ND roda duas vezes, para o que a ficha mostra bater com a tabela.
-- Calcula o ND com uma **calibração de ritmo**: um grupo de T20 aguenta 1 a 2 combates do seu ND por descanso, e em 5e o dia de aventura espera 6 a 8. O mestre informa o nível do grupo e o ritmo desejado.
+- Calcula o ND com uma **calibração de ritmo**: um grupo de T20 aguenta 1 a 2 combates do seu ND por descanso, e em 5e o dia de aventura espera 6 a 8. O mestre escolhe o ritmo (combates por descanso); com o ritmo T20 o ND é igual ao CR.
 
 ## Como usar
 
 1. Como Mestre, abra o diretório de atores e clique em **5e para T20**.
 2. Importar o JSON de um ator de 5e exportado de outro mundo.
-3. Informe o **nível do grupo** e o **ritmo do dia** (ou deixe o nível vazio para usar o ND de referência do CR). O módulo mostra o ND de referência e o ND calibrado, e você pode escolher outro.
+3. Escolha o **ritmo do dia** (quantos combates o grupo faz por descanso). O módulo mostra o ND de referência e o ND calibrado pelo ritmo, e você pode escolher outro no campo ND.
 4. Confira a prévia (PV, CD, Defesa, ataque, resistências e dano por golpe, com avisos) e clique em **Criar ameaça**. O ator é criado na pasta "Convertidos de 5e".
 
-O nível do grupo e o ritmo padrão ficam nas configurações do módulo.
+O ritmo padrão fica nas configurações do módulo.
 
 ### Colar o texto de uma criatura (v3)
 

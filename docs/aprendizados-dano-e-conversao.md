@@ -324,7 +324,7 @@ Não adotado: o termo "corruptor" (Galápagos) e "percepção às cegas" ficam c
 
 ### 13.3 Diálogo: calibragem recolhida e itens arrastados (0.6.0)
 
-- **ND e dificuldade**: o ND é igual ao CR por padrão (ritmo "Estilo T20" e nível vazio). Nível do grupo e ritmo ficam em "Calibrar pelo nível do grupo (opcional)", recolhido; com nível preenchido o bloco abre sozinho. O ritmo muda o ND mesmo com o nível vazio (`calcularND`: Q alvo = Q(ref) × 1,5 ÷ k).
+- **Nível do grupo removido do diálogo** (0.6.0): com o ritmo T20 a fórmula devolve o ND do CR e o nível só movia o ND nos extremos (CR 5, Solo: nível 1 → ND 4, níveis 3 a 8 → ND 5, nível 12 → ND 7). Ficou o ritmo, sempre visível, que muda o ND de verdade (CR 5: T20 → 5, intermediário → 4, estilo 5e → 3). `calcularND` ainda aceita `nivelGrupo` (com testes), mas o diálogo não o envia; a configuração do módulo e a flag `nivelGrupo` dos atores criados saíram. Antes disso: o ND era igual ao CR por padrão e nível e ritmo ficavam em "Calibrar pelo nível do grupo (opcional)", recolhido; com nível preenchido o bloco abre sozinho. O ritmo muda o ND mesmo com o nível vazio (`calcularND`: Q alvo = Q(ref) × 1,5 ÷ k).
 - **Itens arrastados**: soltar `{ type: 'Item', uuid }` na janela; só `poder` e `magia` (`itens-extras.js`). O Ajustar ND conta esses tipos na faixa de habilidades e só reescreve o dano de poderes com a flag `danoPoder`, então o item entra intacto. Arma fica de fora: o balanceamento lê a lista de ataques do diálogo. **Não verificado no Foundry**: o caminho de `getDragEventData` (v13 e v14) e o soltar a partir do compêndio.
 
 ### 13.2 Teste de resistência e cura (0.5.2)

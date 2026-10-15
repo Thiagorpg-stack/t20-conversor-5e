@@ -31,7 +31,7 @@ const ajusteNd = {
 };
 globalThis.game = {
   i18n: { localize: (k) => k, format: (k) => k },
-  settings: { get: (_m, chave) => ({ nivelGrupo: 10, ritmo: 'estilo5e' }[chave]) },
+  settings: { get: (_m, chave) => ({ ritmo: 'estilo5e' }[chave]) },
   modules: { get: () => ajusteNd },
 };
 globalThis.CONFIG = {
@@ -40,9 +40,10 @@ globalThis.CONFIG = {
 
 const { DialogoConversor } = await import('../scripts/dialogo-conversor.js');
 
-test('o diálogo começa com os padrões da campanha (nível e ritmo)', () => {
+test('o diálogo começa com o ritmo padrão da campanha, e sem nível do grupo nem calibragem', () => {
   const d = new DialogoConversor();
-  assert.equal(d.estado.nivelGrupo, 10);
+  for (const campo of ['nivelGrupo', 'calibrarAberto']) assert.equal(campo in d.estado, false);
+  assert.equal('alternarCalibragem' in DialogoConversor.DEFAULT_OPTIONS.actions, false);
   assert.equal(d.estado.ritmo, 'estilo5e');
   assert.equal(d.estado.papel, 'solo');
 });
@@ -240,31 +241,9 @@ test('botão "Colar texto": alterna o campo de texto sem perder o que já foi di
   assert.deepEqual([d.estado.textoAberto, d.estado.texto5e, desenhos], [false, 'bloco colado', 2]); // fechar não apaga o texto
 });
 
-test('"Calibrar pelo nível do grupo": alterna o bloco, mesmo com o nível preenchido, sem perder o que foi digitado', async () => {
-  const d = new DialogoConversor();
-  let desenhos = 0;
-  d.render = async () => { desenhos += 1; };
-  d.element = { querySelectorAll: () => [], querySelector: (s) => (s === '[name=nivelGrupo]' ? { value: '7' } : null) };
-  d.estado.calibrarAberto = false;
-  const alternar = DialogoConversor.DEFAULT_OPTIONS.actions.alternarCalibragem;
-  await alternar.call(d);
-  assert.deepEqual([d.estado.calibrarAberto, d.estado.nivelGrupo, desenhos], [true, '7', 1]);
-  assert.equal((await d._prepareContext()).calibrarVisivel, true);
-  await alternar.call(d);
-  assert.deepEqual([d.estado.calibrarAberto, d.estado.nivelGrupo, desenhos], [false, '7', 2]);
-  assert.equal((await d._prepareContext()).calibrarVisivel, false); // fechar esconde, mesmo com nível: o botão nunca fica sem efeito
-});
-
-test('a calibragem já abre se as configurações têm um nível padrão, e fecha se não têm', () => {
-  const antes = game.settings.get;
-  assert.equal(new DialogoConversor().estado.calibrarAberto, true); // o Foundry simulado devolve nível 10
-  game.settings.get = (_m, chave) => ({ nivelGrupo: 0, ritmo: 't20' }[chave]);
-  try { assert.equal(new DialogoConversor().estado.calibrarAberto, false); } finally { game.settings.get = antes; }
-});
-
 test('sem o nome da criatura o ND já é calculado e mostrado (referência, calibrado e o campo ND)', async () => {
   const d = new DialogoConversor();
-  Object.assign(d.estado, { nome: '', cr: '5', nivelGrupo: 3, papel: 'solo', ritmo: 't20' });
+  Object.assign(d.estado, { nome: '', cr: '5', papel: 'solo', ritmo: 't20' });
   d.tocado = true;
   const ctx = await d._prepareContext();
   assert.equal(ctx.erros.length, 1); // só falta o nome
@@ -328,16 +307,13 @@ test('"remover" tira o item arrastado pelo índice, sem mexer nos outros', async
   assert.equal((await d._prepareContext()).itensExtras[0].nome, 'B');
 });
 
-test('o ND calibrado igual ao de referência é avisado como esperado; com outro ritmo o ND muda', async () => {
+test('o ritmo muda o ND (T20 = CR; mais combates por descanso, ND menor) e o ND manual é respeitado', async () => {
   const d = new DialogoConversor();
-  Object.assign(d.estado, { nome: 'Lobo', cr: '5', nivelGrupo: 3, papel: 'solo', ritmo: 't20' });
-  const igual = await d._prepareContext();
-  assert.deepEqual([igual.referencia, igual.calibrado, igual.calibradoIgual], ['5', '5', true]); // ritmo T20: ND perto do CR
+  Object.assign(d.estado, { nome: 'Lobo', cr: '5', papel: 'solo', ritmo: 't20' });
+  const t20 = await d._prepareContext();
+  assert.deepEqual([t20.referencia, t20.calibrado], ['5', '5']);
   d.estado.ritmo = 'estilo5e';
-  d.estado.ndManual = false;
-  const outro = await d._prepareContext();
-  assert.deepEqual([outro.referencia, outro.calibrado, outro.calibradoIgual], ['5', '2', false]);
-  d.estado.nivelGrupo = '';
-  d.estado.ritmo = 't20';
-  assert.equal((await d._prepareContext()).calibradoIgual, false); // sem nível não há calibragem a comparar
+  const cinco = await d._prepareContext();
+  assert.deepEqual([cinco.referencia, cinco.calibrado], ['5', '3']);
+  assert.equal('calibradoIgual' in cinco || 'calibrarVisivel' in cinco, false);
 });
