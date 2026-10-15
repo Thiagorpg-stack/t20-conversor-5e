@@ -4,6 +4,7 @@ import { obterApi } from './api-ajuste-nd.js';
 import { calcularND, linhaDoND, RITMOS } from './conversor/ritmo.js';
 import { lerAtor5e } from './conversor/origem-json.js';
 import { textoParaAtor5e } from './conversor/origem-texto.js';
+import { itemExtraDe } from './conversor/itens-extras.js';
 import { PASTA_IMAGENS, nomeDoArquivo, ehUrl, tokenDoCdn5e, urlsCandidatas } from './conversor/imagem.js';
 import { papelDoSistema, ndDeReferencia, CODIGOS_TAMANHO, CODIGOS_TIPO, CHAVES_DANO, NOME_DA_PERICIA } from './conversor/mapeamentos.js';
 import { criaturaDeFormulario, aplicarModoAtaques, poderDaTela, MODOS_ATAQUES, EXECUCOES, ATRIBUTOS } from './conversor/origem-cr.js';
@@ -74,6 +75,7 @@ export class DialogoConversor extends HandlebarsApplicationMixin(ApplicationV2) 
       importarTexto: DialogoConversor.#lerTexto,
       alternarTexto: DialogoConversor.#alternarTexto,
       alternarCalibragem: DialogoConversor.#alternarCalibragem,
+      removerItemExtra: DialogoConversor.#removerItemExtra,
       addPoder: DialogoConversor.#addPoder,
       removerPoder: DialogoConversor.#removerPoder,
     },
@@ -85,7 +87,7 @@ export class DialogoConversor extends HandlebarsApplicationMixin(ApplicationV2) 
     super(options);
     const nivelPadrao = Number(game.settings.get(ID_CONVERSOR, 'nivelGrupo')) || '';
     this.estado = {
-      nome: '', conceito: '', img: '', token: '', texto5e: '', textoAberto: false, calibrarAberto: false, cr: '5', papel: 'solo', nivelGrupo: nivelPadrao,
+      nome: '', conceito: '', img: '', token: '', texto5e: '', textoAberto: false, calibrarAberto: false, itensExtras: [], cr: '5', papel: 'solo', nivelGrupo: nivelPadrao,
       ritmo: game.settings.get(ID_CONVERSOR, 'ritmo'),
       nd: null, ndManual: false, chefeFinal: false, conjurador: false, conjuracao: 'int',
       tamanho: 'med', tipo: 'mon', deslocamento: 9,
@@ -174,6 +176,7 @@ export class DialogoConversor extends HandlebarsApplicationMixin(ApplicationV2) 
         indice: i, rotulo,
         opcoes: Object.entries(TESTES).map(([valor, nome]) => ({ valor, nome, selecionado: valor === e.ordem[i] })),
       })),
+      itensExtras: e.itensExtras.map((i, indice) => ({ indice, nome: i.name, tipo: i.type, img: i.img })),
       poderes: e.habilidades.map((h, indice) => ({
         indice, nome: h.nome, texto: h.texto,
         temDano: Boolean(h.dano?.length),
@@ -308,6 +311,10 @@ export class DialogoConversor extends HandlebarsApplicationMixin(ApplicationV2) 
   }
 
   _onRender() {
+    // Soltar um poder ou magia em qualquer lugar da janela (compêndio, outra ficha, diretório de itens).
+    const zona = this.element.querySelector('.conversor');
+    zona?.addEventListener('dragover', (ev) => ev.preventDefault());
+    zona?.addEventListener('drop', (ev) => this.#aoSoltar(ev));
     this.element.querySelectorAll('input:not([type=file]), select, textarea').forEach((campo) => {
       campo.addEventListener('change', (ev) => this.#aoMudar(ev));
     });
@@ -530,6 +537,25 @@ export class DialogoConversor extends HandlebarsApplicationMixin(ApplicationV2) 
   static async #addPoder() {
     this.#lerFormulario();
     this.estado.habilidades.push({ nome: '', texto: '', execucao: '' });
+    await this.render();
+  }
+
+  async #aoSoltar(ev) {
+    ev.preventDefault();
+    const leitor = foundry.applications.ux?.TextEditor?.implementation ?? TextEditor; // v13 e v14 / versões anteriores
+    const arrasto = leitor.getDragEventData(ev);
+    if (arrasto?.type !== 'Item') return;
+    const item = await fromUuid(arrasto.uuid);
+    const extra = item && itemExtraDe(item.toObject());
+    if (!extra) { ui.notifications.warn(game.i18n.format('T20C5E.AvisoItemNaoSuportado', { tipo: item?.type ?? '?' })); return; }
+    this.#lerFormulario();
+    this.estado.itensExtras.push(extra);
+    await this.render();
+  }
+
+  static async #removerItemExtra(_ev, alvo) {
+    this.#lerFormulario();
+    this.estado.itensExtras.splice(Number(alvo.dataset.indice), 1);
     await this.render();
   }
 

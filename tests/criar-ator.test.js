@@ -225,3 +225,20 @@ test('cada ator novo traz um modelo independente (sem estado compartilhado)', ()
   assert.equal(a.system.pericias.luta.atributo, 'for');
   assert.equal(Object.keys(a.system.pericias).length, 34);
 });
+
+const extraPoder = { name: 'Sopro Arrastado', type: 'poder', img: 'icons/svg/aura.svg', effects: [{ name: 'Efeito' }], flags: { [ID_CONVERSOR]: { extra: true } }, system: { rolls: [] } };
+
+test('itens arrastados: entram na ficha depois das armas e poderes, com id novo, e o formulário descarta o que não é poder ou magia', () => {
+  const { criatura } = criaturaDeFormulario(formulario({ itensExtras: [extraPoder, { ...extraPoder, name: 'Espada', type: 'arma' }, null] }));
+  assert.deepEqual(criatura.itensExtras.map((i) => i.name), ['Sopro Arrastado']);
+  const dados = montarDadosAtor(criatura, { nd: '3', gerarId });
+  const nomes = dados.items.map((i) => i.name);
+  assert.equal(nomes.at(-1), 'Sopro Arrastado');
+  assert.equal(dados.items.filter((i) => i.type === 'arma').length, 2); // só as armas dos ataques
+  const extra = dados.items.at(-1);
+  assert.match(extra._id, /^id\d+$/);
+  assert.deepEqual(extra.effects, [{ name: 'Efeito' }]);
+  assert.equal(extraPoder._id, undefined); // o item do estado não é alterado
+  assert.equal(new Set(dados.items.map((i) => i._id)).size, dados.items.length);
+  assert.deepEqual(criaturaDeFormulario(formulario()).criatura.itensExtras, []);
+});

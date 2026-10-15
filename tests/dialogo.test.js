@@ -261,3 +261,51 @@ test('o nível do grupo digitado abre o bloco de calibragem ao importar ou reabr
   vazio.estado.nivelGrupo = '';
   assert.equal((await vazio._prepareContext()).calibrarVisivel, false);
 });
+
+// Soltar poder ou magia na janela: o Foundry entrega { type: 'Item', uuid }, que o diálogo resolve com fromUuid.
+function dialogoComZona(arrasto, itens) {
+  const d = new DialogoConversor();
+  d.desenhos = 0;
+  d.render = async () => { d.desenhos += 1; };
+  const zona = { ouvintes: {}, addEventListener(tipo, f) { this.ouvintes[tipo] = f; } };
+  d.element = { querySelectorAll: () => [], querySelector: (s) => (s === '.conversor' ? zona : null) };
+  d._onRender();
+  foundry.applications.ux = { TextEditor: { implementation: { getDragEventData: () => arrasto } } };
+  globalThis.fromUuid = async (uuid) => itens[uuid] ?? null;
+  const avisos = [];
+  globalThis.ui = { notifications: { warn: (m) => avisos.push(m) } };
+  game.i18n.format = (chave, dados) => `${chave}:${JSON.stringify(dados)}`;
+  return { d, zona, avisos, soltar: () => zona.ouvintes.drop({ preventDefault() {} }) };
+}
+const itemFalso = (type, name = 'Sopro') => ({ type, name, toObject: () => ({ _id: 'x', name, type, flags: {}, system: {} }) });
+
+test('soltar um poder na janela: entra em itensExtras e o diálogo se redesenha; arrastar sobre a janela é permitido', async () => {
+  const { d, zona, soltar } = dialogoComZona({ type: 'Item', uuid: 'U1' }, { U1: itemFalso('poder') });
+  let impedido = false;
+  zona.ouvintes.dragover({ preventDefault: () => { impedido = true; } });
+  assert.equal(impedido, true);
+  await soltar();
+  assert.deepEqual(d.estado.itensExtras.map((i) => [i.name, i.type, '_id' in i]), [['Sopro', 'poder', false]]);
+  assert.equal(d.desenhos, 1);
+});
+
+test('soltar arma, item que não abre ou algo que não é item: não entra; só os dois primeiros avisam', async () => {
+  const arma = dialogoComZona({ type: 'Item', uuid: 'U2' }, { U2: itemFalso('arma', 'Espada') });
+  await arma.soltar();
+  assert.deepEqual([arma.d.estado.itensExtras.length, arma.d.desenhos], [0, 0]);
+  assert.match(arma.avisos[0], /AvisoItemNaoSuportado.*arma/);
+  const sumido = dialogoComZona({ type: 'Item', uuid: 'U3' }, {});
+  await sumido.soltar();
+  assert.match(sumido.avisos[0], /AvisoItemNaoSuportado.*\?/);
+  const ator = dialogoComZona({ type: 'Actor', uuid: 'A1' }, {});
+  await ator.soltar();
+  assert.deepEqual([ator.avisos.length, ator.d.estado.itensExtras.length], [0, 0]);
+});
+
+test('"remover" tira o item arrastado pelo índice, sem mexer nos outros', async () => {
+  const { d } = dialogoComZona(null, {});
+  d.estado.itensExtras = [{ name: 'A', type: 'poder' }, { name: 'B', type: 'magia' }];
+  await DialogoConversor.DEFAULT_OPTIONS.actions.removerItemExtra.call(d, null, { dataset: { indice: '0' } });
+  assert.deepEqual(d.estado.itensExtras.map((i) => i.name), ['B']);
+  assert.equal((await d._prepareContext()).itensExtras[0].nome, 'B');
+});

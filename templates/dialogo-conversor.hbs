@@ -178,6 +178,17 @@
     {{/each}}
     <button type="button" data-action="addPoder"><i class="fas fa-plus"></i> {{localize "T20C5E.AddPoder"}}</button>
   </fieldset>
+  <fieldset class="conversor__itens">
+    <legend>{{localize "T20C5E.SecaoItensExtras"}}</legend>
+    <p class="conversor__nota">{{localize "T20C5E.ItensExtrasDica"}}</p>
+    {{#each itensExtras}}
+    <div class="conversor__linha conversor__item">
+      <img src="{{img}}" alt="" width="24" height="24">
+      <span class="conversor__largo">{{nome}} <em>({{tipo}})</em></span>
+      <button type="button" data-action="removerItemExtra" data-indice="{{indice}}" title="{{localize 'T20C5E.Remover'}}"><i class="fas fa-trash"></i></button>
+    </div>
+    {{/each}}
+  </fieldset>
 
   {{#if erros.length}}
   <div class="conversor__erros"><ul>{{#each erros}}<li>{{this}}</li>{{/each}}</ul></div>

@@ -322,6 +322,11 @@ O que só apareceu nas fichas reais: o "(10 ft)" depois dos metros faria o `term
 
 Não adotado: o termo "corruptor" (Galápagos) e "percepção às cegas" ficam como sinônimos, mas o site usa `ínfero` e `visão às cegas`.
 
+### 13.3 Diálogo: calibragem recolhida e itens arrastados (0.6.0)
+
+- **ND e dificuldade**: o ND é igual ao CR por padrão (ritmo "Estilo T20" e nível vazio). Nível do grupo e ritmo ficam em "Calibrar pelo nível do grupo (opcional)", recolhido; com nível preenchido o bloco abre sozinho. O ritmo muda o ND mesmo com o nível vazio (`calcularND`: Q alvo = Q(ref) × 1,5 ÷ k).
+- **Itens arrastados**: soltar `{ type: 'Item', uuid }` na janela; só `poder` e `magia` (`itens-extras.js`). O Ajustar ND conta esses tipos na faixa de habilidades e só reescreve o dano de poderes com a flag `danoPoder`, então o item entra intacto. Arma fica de fora: o balanceamento lê a lista de ataques do diálogo. **Não verificado no Foundry**: o caminho de `getDragEventData` (v13 e v14) e o soltar a partir do compêndio.
+
 ### 13.2 Teste de resistência e cura (0.5.2)
 
 - No Tormenta20 **"salvaguarda" é "teste de resistência"** e todo teste é Fortitude, Reflexos ou Vontade. A tabela atributo → categoria (`periciaDoAtributo5e`) passou a levar **Força para Fortitude** (antes ia para Atletismo, que não é teste de resistência). O texto dos poderes em português passa por `trocarSalvaguardaPt`: "Salvaguarda de Constituição: CD 14" → "Teste de Fortitude: CD 14"; "uma salvaguarda" → "um teste de resistência" (o artigo concorda com "teste"); "salvaguardas de Inteligência, Sabedoria e Carisma" → "testes de Vontade"; o "teste de resistência de Destreza" da tradução antiga → "teste de Reflexos". Vale também para o JSON em português (passa pelo mesmo `textoT20`).

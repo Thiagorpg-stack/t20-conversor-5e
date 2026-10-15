@@ -2,6 +2,7 @@
 // Função pura: os erros voltam como códigos (nome, cr, papel...), que o diálogo traduz.
 import { parseCR, CODIGOS_TAMANHO, CODIGOS_TIPO, CHAVES_DANO } from './mapeamentos.js';
 import { RITMOS, xpDoCR } from './ritmo.js';
+import { TIPOS_ITEM_EXTRA } from './itens-extras.js';
 
 export const ATRIBUTOS = ['for', 'des', 'con', 'int', 'sab', 'car'];
 export const PAPEIS_TABELA = ['solo', 'lacaio', 'especial'];
@@ -139,6 +140,7 @@ export function criaturaDeFormulario(f) {
       atributos,
       ataques,
       habilidades,
+      itensExtras: Array.isArray(f.itensExtras) ? f.itensExtras.filter((i) => TIPOS_ITEM_EXTRA.includes(i?.type)) : [],
       sentidos: { value: lista(f.sentidos?.value), custom: String(f.sentidos?.custom ?? '').trim() },
       idiomas: lista(f.idiomas),
       idiomasCustom: String(f.idiomasCustom ?? '').trim(),
