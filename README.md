@@ -41,7 +41,7 @@ O nível do grupo e o ritmo padrão ficam nas configurações do módulo.
 
 ### Colar o texto de uma criatura (v3)
 
-1. No diálogo, clique em **Colar texto de 5e** e cole o bloco inteiro de **uma** criatura.
+1. No diálogo, clique em **Colar Texto** e cole o bloco inteiro de **uma** criatura.
 2. Clique em **Ler texto**. O formulário é preenchido e o relatório mostra o que foi lido, o que pede revisão e o que ficou de fora.
 3. Confira o CR, o papel e os ataques (principalmente a quantidade de cada ataque e o fim do nome de cada habilidade: o texto colado perde o itálico, então o módulo deduz onde o nome acaba) e crie a ameaça como de costume.
 

@@ -73,6 +73,7 @@ export class DialogoConversor extends HandlebarsApplicationMixin(ApplicationV2) 
       importar5e: DialogoConversor.#importar5e,
       importarTexto: DialogoConversor.#lerTexto,
       alternarTexto: DialogoConversor.#alternarTexto,
+      alternarCalibragem: DialogoConversor.#alternarCalibragem,
       addPoder: DialogoConversor.#addPoder,
       removerPoder: DialogoConversor.#removerPoder,
     },
@@ -84,7 +85,7 @@ export class DialogoConversor extends HandlebarsApplicationMixin(ApplicationV2) 
     super(options);
     const nivelPadrao = Number(game.settings.get(ID_CONVERSOR, 'nivelGrupo')) || '';
     this.estado = {
-      nome: '', conceito: '', img: '', token: '', texto5e: '', textoAberto: false, cr: '5', papel: 'solo', nivelGrupo: nivelPadrao,
+      nome: '', conceito: '', img: '', token: '', texto5e: '', textoAberto: false, calibrarAberto: false, cr: '5', papel: 'solo', nivelGrupo: nivelPadrao,
       ritmo: game.settings.get(ID_CONVERSOR, 'ritmo'),
       nd: null, ndManual: false, chefeFinal: false, conjurador: false, conjuracao: 'int',
       tamanho: 'med', tipo: 'mon', deslocamento: 9,
@@ -152,7 +153,8 @@ export class DialogoConversor extends HandlebarsApplicationMixin(ApplicationV2) 
   async _prepareContext() {
     const e = this.estado;
     const ctx = {
-      e, papeis: PAPEIS.map(([v, r]) => ({ valor: v, rotulo: r, selecionado: v === e.papel })),
+      e, calibrarVisivel: e.calibrarAberto || String(e.nivelGrupo ?? '') !== '', // com nível preenchido o bloco nunca fica escondido
+      papeis: PAPEIS.map(([v, r]) => ({ valor: v, rotulo: r, selecionado: v === e.papel })),
       ritmos: Object.keys(RITMOS).map((v) => ({ valor: v, rotulo: NOMES_RITMO[v], selecionado: v === e.ritmo })),
       tamanhos: CODIGOS_TAMANHO.map((v) => ({ valor: v, rotulo: NOMES_TAMANHO[v], selecionado: v === e.tamanho })),
       tipos: CODIGOS_TIPO.map((v) => ({ valor: v, rotulo: NOMES_TIPO[v], selecionado: v === e.tipo })),
@@ -481,6 +483,12 @@ export class DialogoConversor extends HandlebarsApplicationMixin(ApplicationV2) 
   static async #alternarTexto() {
     this.#lerFormulario();
     this.estado.textoAberto = !this.estado.textoAberto;
+    await this.render();
+  }
+
+  static async #alternarCalibragem() {
+    this.#lerFormulario();
+    this.estado.calibrarAberto = !this.estado.calibrarAberto;
     await this.render();
   }
 

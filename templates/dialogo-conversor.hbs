@@ -19,6 +19,7 @@
   {{/if}}
   <fieldset>
     <legend>{{localize "T20C5E.SecaoCriatura"}}</legend>
+    <p class="conversor__nota">{{localize "T20C5E.NotaCriatura"}}</p>
     <div class="conversor__linha">
       <label class="conversor__largo">{{localize "T20C5E.Nome"}}
         <input type="text" name="nome" value="{{e.nome}}" placeholder="{{localize 'T20C5E.NomeDica'}}">
@@ -30,7 +31,7 @@
         <select name="papel">{{#each papeis}}<option value="{{valor}}" {{#if selecionado}}selected{{/if}}>{{rotulo}}</option>{{/each}}</select>
       </label>
     </div>
-    <label>{{localize "T20C5E.Conceito"}}
+    <label title="{{localize 'T20C5E.ConceitoDica'}}">{{localize "T20C5E.Conceito"}}
       <textarea name="conceito" rows="2">{{e.conceito}}</textarea>
     </label>
     <div class="conversor__linha">
@@ -77,6 +78,15 @@
 
   <fieldset>
     <legend>{{localize "T20C5E.SecaoRitmo"}}</legend>
+    <p class="conversor__nota">{{localize "T20C5E.NotaRitmo"}}</p>
+    <div class="conversor__linha">
+      <label>{{localize "T20C5E.NDFinal"}}
+        <select name="nd">{{#each nds}}<option value="{{valor}}" {{#if selecionado}}selected{{/if}}>{{valor}}</option>{{/each}}</select>
+      </label>
+      <button type="button" data-action="alternarCalibragem"><i class="fas fa-sliders"></i> {{localize "T20C5E.Calibrar"}}</button>
+    </div>
+    {{#if calibrarVisivel}}
+    <p class="conversor__nota">{{localize "T20C5E.CalibrarDica"}}</p>
     <div class="conversor__linha">
       <label>{{localize "T20C5E.NivelGrupo"}}
         <input type="number" name="nivelGrupo" value="{{e.nivelGrupo}}" min="0" max="20" placeholder="—" title="{{localize 'T20C5E.NivelGrupoDica'}}">
@@ -84,10 +94,8 @@
       <label class="conversor__largo">{{localize "T20C5E.Ritmo"}}
         <select name="ritmo">{{#each ritmos}}<option value="{{valor}}" {{#if selecionado}}selected{{/if}}>{{rotulo}}</option>{{/each}}</select>
       </label>
-      <label>{{localize "T20C5E.NDFinal"}}
-        <select name="nd">{{#each nds}}<option value="{{valor}}" {{#if selecionado}}selected{{/if}}>{{valor}}</option>{{/each}}</select>
-      </label>
     </div>
+    {{/if}}
     {{#if referencia}}
     <p class="conversor__nota">
       {{localize "T20C5E.NDReferencia"}}: <strong>{{referencia}}</strong>

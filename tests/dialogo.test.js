@@ -239,3 +239,25 @@ test('botão "Colar texto": alterna o campo de texto sem perder o que já foi di
   await alternar.call(d);
   assert.deepEqual([d.estado.textoAberto, d.estado.texto5e, desenhos], [false, 'bloco colado', 2]); // fechar não apaga o texto
 });
+
+test('"Calibrar pelo nível do grupo": alterna o bloco recolhido sem perder o que foi digitado', async () => {
+  const d = new DialogoConversor();
+  let desenhos = 0;
+  d.render = async () => { desenhos += 1; };
+  d.element = { querySelectorAll: () => [], querySelector: (s) => (s === '[name=nivelGrupo]' ? { value: '7' } : null) };
+  const alternar = DialogoConversor.DEFAULT_OPTIONS.actions.alternarCalibragem;
+  assert.equal(d.estado.calibrarAberto, false);
+  await alternar.call(d);
+  assert.deepEqual([d.estado.calibrarAberto, d.estado.nivelGrupo, desenhos], [true, '7', 1]);
+  await alternar.call(d);
+  assert.deepEqual([d.estado.calibrarAberto, d.estado.nivelGrupo, desenhos], [false, '7', 2]); // fechar não apaga o nível
+});
+
+test('o nível do grupo digitado abre o bloco de calibragem ao importar ou reabrir o diálogo', async () => {
+  const d = new DialogoConversor();
+  d.estado.nivelGrupo = 5;
+  assert.equal((await d._prepareContext()).calibrarVisivel, true); // com nível preenchido o bloco nunca fica escondido
+  const vazio = new DialogoConversor();
+  vazio.estado.nivelGrupo = '';
+  assert.equal((await vazio._prepareContext()).calibrarVisivel, false);
+});
