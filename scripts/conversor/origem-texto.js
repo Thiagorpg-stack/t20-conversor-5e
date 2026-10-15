@@ -31,11 +31,11 @@ const TIPOS = {
   construct: 'construct', constructo: 'construct', construto: 'construct', dragon: 'dragon', dragao: 'dragon',
   elemental: 'elemental', fey: 'fey', fada: 'fey', fiend: 'fiend', infero: 'fiend', giant: 'giant', gigante: 'giant',
   humanoid: 'humanoid', humanoide: 'humanoid', monstrosity: 'monstrosity', monstruosidade: 'monstrosity',
-  corruptor: 'fiend', ooze: 'ooze', limo: 'ooze', plant: 'plant', planta: 'plant', undead: 'undead', 'morto-vivo': 'undead',
+  corruptor: 'fiend', feerico: 'fey', gosma: 'ooze', ooze: 'ooze', limo: 'ooze', plant: 'plant', planta: 'plant', undead: 'undead', 'morto-vivo': 'undead',
 };
 const DANO = {
   bludgeoning: 'bludgeoning', contundente: 'bludgeoning', concussao: 'bludgeoning', piercing: 'piercing', perfurante: 'piercing',
-  slashing: 'slashing', cortante: 'slashing', fire: 'fire', fogo: 'fire', igneo: 'fire', cold: 'cold', frio: 'cold', acid: 'acid', acido: 'acid',
+  slashing: 'slashing', cortante: 'slashing', fire: 'fire', fogo: 'fire', igneo: 'fire', cold: 'cold', frio: 'cold', gelido: 'cold', acid: 'acid', acido: 'acid',
   lightning: 'lightning', eletrico: 'lightning', eletricidade: 'lightning', necrotic: 'necrotic', necrotico: 'necrotic',
   radiant: 'radiant', radiante: 'radiant', psychic: 'psychic', psiquico: 'psychic', force: 'force', energia: 'force',
   energetico: 'force', forca: 'force', thunder: 'thunder', trovejante: 'thunder', trovao: 'thunder',
@@ -44,7 +44,7 @@ const DANO = {
 const CONDICOES = {
   blinded: 'blinded', cego: 'blinded', charmed: 'charmed', enfeiticado: 'charmed', deafened: 'deafened', surdo: 'deafened',
   exhaustion: 'exhaustion', exaustao: 'exhaustion', frightened: 'frightened', amedrontado: 'frightened', assustado: 'frightened',
-  apavorado: 'frightened', grappled: 'grappled', agarrado: 'grappled', incapacitated: 'incapacitated', incapacitado: 'incapacitated',
+  apavorado: 'frightened', grappled: 'grappled', agarrado: 'grappled', imobilizado: 'grappled', incapacitated: 'incapacitated', incapacitado: 'incapacitated',
   paralyzed: 'paralyzed', paralisado: 'paralyzed', petrified: 'petrified', petrificado: 'petrified', poisoned: 'poisoned',
   envenenado: 'poisoned', prone: 'prone', caido: 'prone', derrubado: 'prone', restrained: 'restrained', impedido: 'restrained',
   contido: 'restrained', stunned: 'stunned', atordoado: 'stunned', unconscious: 'unconscious', inconsciente: 'unconscious',
@@ -56,12 +56,12 @@ const IDIOMAS = {
   gigante: 'giant', gnoll: 'gnoll', ignan: 'ignan', infernal: 'infernal', orc: 'orc', terran: 'terran',
 };
 const SENTIDOS = {
-  darkvision: 'darkvision', 'visao no escuro': 'darkvision', blindsight: 'blindsight', 'visao cega': 'blindsight', 'percepcao as cegas': 'blindsight',
-  tremorsense: 'tremorsense', 'sentido sismico': 'tremorsense', truesight: 'truesight', 'visao verdadeira': 'truesight',
+  darkvision: 'darkvision', 'visao no escuro': 'darkvision', blindsight: 'blindsight', 'visao cega': 'blindsight', 'visao as cegas': 'blindsight', 'percepcao as cegas': 'blindsight',
+  tremorsense: 'tremorsense', 'sentido sismico': 'tremorsense', sismiconsciencia: 'tremorsense', truesight: 'truesight', 'visao verdadeira': 'truesight',
 };
 const MODOS = {
   walk: 'walk', andar: 'walk', burrow: 'burrow', escavar: 'burrow', escavacao: 'burrow', climb: 'climb', escalar: 'climb',
-  escalada: 'climb', fly: 'fly', voo: 'fly', voar: 'fly', swim: 'swim', nadar: 'swim', natacao: 'swim',
+  escalada: 'climb', fly: 'fly', voo: 'fly', voar: 'fly', swim: 'swim', nado: 'swim', nadar: 'swim', natacao: 'swim',
 };
 const ATRIBUTOS = [['str', 'for'], ['dex', 'des'], ['con', 'con'], ['int', 'int'], ['wis', 'sab'], ['cha', 'car']];
 const ATRIBUTO_POR_NOME = {
@@ -73,7 +73,7 @@ const NOMES_ATRIBUTO = Object.keys(ATRIBUTO_POR_NOME).join('|');
 // Rótulos do cabeçalho (comparados em minúsculas e sem acento, no começo da linha).
 const ROTULOS = {
   cr: /^(?:challenge|cr|nivel de desafio|desafio|nd)\s+/,
-  velocidade: /^(?:speed|deslocamento)\s+/,
+  velocidade: /^(?:speed|deslocamento|movimento)\s+/,
   sentidos: /^(?:senses|sentidos)\s+/,
   idiomas: /^(?:languages|idiomas|linguas)\s+/,
   pv: /^(?:hit points|hp|pontos de vida|pv)\s+/,
@@ -84,7 +84,9 @@ const ROTULOS = {
   dv: /^(?:damage vulnerabilit(?:y|ies)|vulnerabilit(?:y|ies)|vulnerabilidades?(?: a dano)?)\s+/,
   ci: /^(?:condition immunities|imunidades? a condic(?:ao|oes))\s+/,
 };
-const IGNORAR = /^(?:proficiency bonus|bonus de proficiencia|gear|equipamento)\b/;
+// Lixo que vem junto quando se copia a ficha de um site: edição, aviso de clique, "Fonte ..." (sem ponto: "Fonte de Luz." é habilidade) e licença.
+const RUIDO = /^(?:20\d\d|\(clique para alterar a edicao\)|fonte [^.]*|regras do srd sob.*|criatura da comunidade .*)$/;
+const IGNORAR =/^(?:proficiency bonus|bonus de proficiencia|gear|equipamento)\b/;
 
 const SECOES = [
   ['traco', /^(?:traits|caracteristicas)$/],
@@ -108,14 +110,17 @@ const valorDe = (linhas, re) => {
 
 // ---------- cabeçalho ----------
 
-// "Large aberration, neutral" / "Grande aberração, neutro" / "Dragão Médio, Neutro e Mau": tamanho e tipo antes da vírgula, em qualquer ordem.
+// "Large aberration, neutral" / "Grande aberração, neutro" / "Dragão Médio, Neutro e Mau": tamanho e tipo antes da vírgula, em qualquer
+// ordem. Sem vírgula (a 2014 em português omite o alinhamento: "Médio humanoide (half-orc)") a linha tem de começar pelo tamanho.
+// "Pequeno ou Médio" fica com o maior.
 function lerTamanhoTipo(linhas) {
   for (const linha of linhas.slice(0, 3)) {
-    if (!linha.includes(',')) continue;
     const palavras = semAcento(linha.split(',')[0]).match(/[a-z-]+/g) ?? [];
-    const tamanho = palavras.map((p) => TAMANHOS[p]).find(Boolean);
+    const i = palavras.findIndex((p) => TAMANHOS[p]);
+    if (i < 0 || (!linha.includes(',') && i > 0)) continue;
+    const tamanho = TAMANHOS[/^(?:ou|or)$/.test(palavras[i + 1]) && TAMANHOS[palavras[i + 2]] ? palavras[i + 2] : palavras[i]];
     const tipo = palavras.map((p) => TIPOS[p] ?? TIPOS[p.replace(/s$/, '')]).find(Boolean);
-    if (tamanho && tipo) return { linha, tamanho, tipo };
+    if (tipo) return { linha, tamanho, tipo };
   }
   return null;
 }
@@ -230,7 +235,7 @@ function lerArea(f) {
   if (m) return { type: 'line', size: Number(m[1]), width: m[2] ? Number(m[2]) : 5, units: 'ft' };
   m = /(cone|esfera|cubo|cilindro|emanacao|linha) de (\d+(?:,\d+)?) ?(?:m|metros?)(?![a-z])/.exec(f);
   if (m) {
-    const largura = /(\d+(?:,\d+)?) ?(?:m|metros?) de largura/.exec(f);
+    const largura = /(\d+(?:,\d+)?) ?(?:m|metros?)(?: \([^)]*\))? de largura/.exec(f);
     return { type: FORMAS[m[1]], size: numero(m[2]), ...(m[1] === 'linha' && { width: largura ? numero(largura[1]) : 1.5 }), units: 'm' };
   }
   return null;
@@ -270,12 +275,14 @@ function montarItem({ nome: bruto, texto, secao }, ator) {
   const recarga = /\(\s*(?:recharge|recarga)\s+(\d)/.exec(fNome);
   const descanso = /\(\s*(?:recharges? after (?:a|an) |recarga apos (?:um |uma )?descanso )(short|long|curto|longo)/.exec(fNome);
   const nome = bruto.replace(/\s*\(\s*(?:\d+\s*\/|recharge|recarga)[^)]*\)/i, '').trim();
-  const item = { type: 'feat', name: nome, system: { description: { value: texto.replace(REFERENCIAS, '&Reference[condition=$1]') } } };
+  // "3 m (10 ft)": os pés entre parênteses saem, senão o termosT20 da v2 converteria de novo ("3 m (alcance curto)")
+  const descricao = texto.replace(/(?<=\d ?m)\s*\([\d.,/]+ ?ft\)/g, '').replace(REFERENCIAS, '&Reference[condition=$1]');
+  const item = { type: 'feat', name: nome, system: { description: { value: descricao } } };
   if (ATIVACAO[secao]) item.system.activation = { type: ATIVACAO[secao] };
   if (usos) item.system.uses = { max: usos[1], recovery: [{ period: PERIODOS[usos[2]] }] };
   if (recarga) item.system.uses = { max: '', recovery: [{ period: 'recharge', formula: recarga[1] }] };
   if (descanso) item.system.uses = { max: '1', recovery: [{ period: /^(?:short|curto)$/.test(descanso[1]) ? 'sr' : 'lr' }] };
-  if (/^(?:multiattack|multiataque|ataques? multiplos?)$/.test(semAcento(nome))) item.system.identifier = 'multiattack';
+  if (/^(?:multiattack|multiataque|ataques? multiplos?)(?: \(.*\))?$/.test(semAcento(nome))) item.system.identifier = 'multiattack';
   if (/^(?:spellcasting|conjuracao)$/.test(semAcento(nome))) item.system.identifier = 'spellcasting';
   if (/^(?:innate )?spellcasting(?: \(.*\))?$|^conjuracao(?: inata)?(?: \(.*\))?$/.test(semAcento(nome))) {
     const atributo = (f.match(new RegExp(`\\b(?:intelligence|wisdom|charisma|inteligencia|sabedoria|carisma)\\b`)) ?? [])[0];
@@ -312,7 +319,7 @@ function montarItem({ nome: bruto, texto, secao }, ator) {
 // ---------- ponto de entrada ----------
 
 export function textoParaAtor5e(bruto) {
-  const linhas = normalizar(bruto).split('\n').filter(Boolean);
+  const linhas = normalizar(bruto).split('\n').filter((l) => l && !RUIDO.test(semAcento(l)));
   const avisos = [];
   const primeiraSecao = linhas.findIndex((l) => secaoDe(l));
   const linhaCR = linhas.findIndex((l) => ROTULOS.cr.test(semAcento(l)));
@@ -378,8 +385,8 @@ export function textoParaAtor5e(bruto) {
     if (entrada) { entradas.push({ ...entrada, secao }); continue; }
     const anterior = entradas.at(-1);
     if (anterior?.secao === secao) { anterior.texto += `\n${linha}`; continue; }
-    const n = /(\d+)\s+(?:legendary actions|acoes lendarias)/.exec(semAcento(linha));
-    if (secao === 'lendaria' && n) { s.resources.legact = { max: Number(n[1]) }; continue; }
+    const n = /(\d+)\s+(?:legendary actions|acoes lendarias)|(?:legendary action uses|usos de acao lendaria)\s*:\s*(\d+)/.exec(semAcento(linha));
+    if (secao === 'lendaria' && n) { s.resources.legact = { max: Number(n[1] ?? n[2]) }; continue; }
     if (secao === 'lendaria' || secao === 'covil') continue; // introdução da seção
     avisos.push(`Texto sem nome de habilidade ignorado: "${linha.slice(0, 50)}".`);
   }

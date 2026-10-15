@@ -5,7 +5,7 @@ Módulo para Foundry VTT que converte criaturas de **D&D 5e** em ameaças de **T
 [![Video Title](https://img.youtube.com/vi/oGsEAPHrdFo/0.jpg)](https://www.youtube.com/watch?v=oGsEAPHrdFo)
 [![Video Title](https://img.youtube.com/vi/30FP5qsoHQs/0.jpg)](https://www.youtube.com/watch?v=30FP5qsoHQs)
 
-> **Status: v0.5.0 (em teste).** A v1, "Criar ameaça a partir de CR", a v2, "Importar JSON de 5e", e a v3, "Colar bloco de estatísticas", estão implementadas.
+> **Status: v0.5.1 (em teste).** A v1, "Criar ameaça a partir de CR", a v2, "Importar JSON de 5e", e a v3, "Colar bloco de estatísticas", estão implementadas.
 
 Exige o Ajustar ND 0.10.2.
 
@@ -14,7 +14,7 @@ Exige o Ajustar ND 0.10.2.
 ## O que já faz
 
 - Converte os **números** (ND, papel, PV, Defesa, CD, ataque, resistências e dano), pela tabela.
-- **Texto colado (v3)**: cola o bloco de estatísticas de uma criatura (livro, site ou PDF; inglês ou português; layouts de 2014 e de 2024) e o módulo preenche o formulário como na importação de JSON. Lê nome, tamanho, tipo, CR, deslocamentos, atributos, sentidos, idiomas, resistências, imunidades, ataques com dano e dano extra, quantidades do Multiataque, poderes com dano, teste de resistência, área, usos e recarga, ações lendárias e de covil, e o atributo de conjuração. Não lê imagem nem token, nem a CA; o PV só ajuda a sugerir o papel. O relatório diz o que foi lido e o que pede revisão.
+- **Texto colado (v3)**: cola o bloco de estatísticas de uma criatura (livro, site ou PDF; inglês ou português; layouts de 2014 e de 2024) e o módulo preenche o formulário como na importação de JSON. Lê nome, tamanho, tipo, CR, deslocamentos, atributos, sentidos, idiomas, resistências, imunidades, ataques com dano e dano extra, quantidades do Multiataque, poderes com dano, teste de resistência, área, usos e recarga, ações lendárias e de covil, e o atributo de conjuração. Não lê imagem nem token, nem a CA; o PV só ajuda a sugerir o papel. O relatório diz o que foi lido e o que pede revisão. O vocabulário em português foi conferido com o SRD traduzido do [Pocket DM](https://pocketdm.com.br/monstros) (a ficha copiada de lá é lida como está) e com os termos da tradução da Galápagos.
 - Entrega as habilidades, magias e ações lendárias; não traduz regras.
 - **Poderes com dano** (sopro, constrição, rugido...): lê o dano (dado, bônus, tipo) e o teste de resistência da 5e, troca "Constitution Saving Throw" por "Fortitude" (e os demais atributos pela perícia do T20), cria a rolagem de dano no poder e marca o poder para o Ajustar ND recalcular o dano pela tabela. Por poder, o diálogo permite desligar o ajuste ("Ajustar o dano pela tabela do ND") e escolher se tem efeito (condição, teste de resistência ou área). Carisma e Inteligência viram Vontade (padrão assumido).
 - **Dano adicional do golpe**: vira uma segunda parte do dano da arma, com o tipo editável no diálogo. Uma caixa por ataque define se esse dano entra no balanceamento: marcada, ele mantém a proporção que tinha na 5e (calculada com o modificador do atributo do ataque) sobre o dano total por golpe do ND; desmarcada, ele fica fixo e só o dano principal é recalculado.

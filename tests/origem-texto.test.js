@@ -358,3 +358,101 @@ test('"Recharges after a Short or Long Rest" vira 1/descanso curto; "Innate Spel
   assert.match(rajada.texto, /^\(1\/descanso curto\)/);
   assert.equal(rajada.area, 'linha 9m x 1,5m');
 });
+
+// ---------- formato copiado do pocketdm.com.br (uma linha por campo, com o lixo da página) ----------
+
+const SITE = [
+  'Gárgula de Barro (Mud Gargoyle)', '2024', '(clique para alterar a edição)', 'Médio feérico, neutro e mau',
+  'Classe de Armadura 15', 'Pontos de Vida 52 (7d8 + 21)', 'Movimento 9 m (30 ft), voo 18 m (60 ft), nado 12 m (40 ft)', 'Iniciativa +1',
+  'Resistências a Dano gélido; contundente, perfurante e cortante de armas não mágicas',
+  'Imunidades a Dano ígneo; venenoso', 'Imunidades a Condição enfeitiçado; imobilizado; envenenado',
+  'FOR', '15', '(+2)', 'DES', '12', '(+1)', 'CON', '17', '(+3)', 'INT', '8', '(-1)', 'SAB', '11', '(+0)', 'CAR', '10', '(+0)',
+  'Sentidos visão às cegas 3 m (10 ft), visão no escuro 18 m (60 ft), sismiconsciência 9 m (30 ft), Percepção Passiva 12',
+  'Idiomas Comum; telepatia 18 m (60 ft).', 'Nível de Desafio 3 (700 XP)', 'Fonte Monster Manual (2024)',
+  'Resistência a Magia. O gárgula tem vantagem em salvaguardas contra magias e outros efeitos mágicos.',
+  'Resistência Lendária (3/Dia, ou 4/Dia no Covil). Se o gárgula falhar em uma salvaguarda, ele pode escolher ter sucesso.',
+  'Ações',
+  'Ataque Múltiplo. O gárgula realiza dois ataques de Garra.',
+  'Garra. Ataque Corpo a Corpo: +4, alcance 1,5 m (5 ft). 8 (1d10 + 3) de dano de concussão mais 3 (1d6) de dano de fogo, e o alvo fica com a condição Imobilizado (Grappled) (CD 12 para escapar).',
+  'Sopro de Lama (Recarga 5-6). Salvaguarda de Destreza: CD 13, cada criatura em uma Linha de 9 m (30 ft) de comprimento por 1,5 m (5 ft) de largura. Falha: 14 (4d6) de dano de concussão. Sucesso: Metade do dano.',
+  'Jato Gélido (Recarga 6). Salvaguarda de Constituição: CD 13, cada criatura em uma Linha de 18 m (60 ft) de comprimento e 3 m (10 ft) de largura. Falha: 10 (3d6) de dano de frio.',
+  'Ações Lendárias',
+  'Usos de Ação Lendária: 3 (4 no Covil). Imediatamente após o turno de outra criatura, o gárgula pode gastar um uso para realizar uma das ações a seguir.',
+  'Rabada. O gárgula realiza um ataque de Garra.',
+  'Regras do SRD sob CC BY 4.0 da Wizards of the Coast. Tradução em português e curadoria editorial © 2026 Pocket DM. Licença e atribuição',
+].join('\n');
+
+test('formato do pocketdm: Movimento, nado, feérico, gélido, imobilizado, visão às cegas, sismiconsciência e o lixo da página', () => {
+  const r = ler(SITE);
+  const e = r.estado;
+  assert.deepEqual(r.avisos, []); // "2024", "(clique...)", "Fonte..." e o rodapé de licença não viram nada
+  assert.deepEqual([e.nome, e.cr, e.tamanho, e.tipo], ['Gárgula de Barro (Mud Gargoyle)', '3', 'med', 'esp']);
+  assert.deepEqual([e.deslocamento, e.deslocamentosExtra], [9, { fly: 18, swim: 12 }]);
+  assert.deepEqual(e.atributos, { for: 2, des: 1, con: 3, int: -1, sab: 0, car: 0 });
+  assert.deepEqual(e.sentidos.value, ['escuro', 'cegas']);
+  assert.match(r.relatorio.find((l) => /Sentidos sem equivalente/.test(l.texto)).texto, /tremorsense 30 pés/);
+  assert.deepEqual([e.idiomas, e.idiomasCustom], [['comum'], 'telepatia 18 m']);
+  assert.deepEqual(e.resistenciasDano.reducao, ['frio', 'impacto', 'perfuracao', 'corte']);
+  assert.deepEqual(e.resistenciasDano.imunidade, ['fogo']);
+  assert.deepEqual(e.imunidadesCondicao.value, ['enfeiticado', 'agarrado', 'envenenado']);
+  assert.deepEqual(e.ataques.map((a) => [a.nome, a.dano, a.qtd, a.danoExtra]), [['Garra', 'impacto', 2, [{ formula: '1d6', tipo: 'fogo' }]]]);
+  assert.doesNotMatch(e.ataques[0].descricao, /\bft\b/); // o "(5 ft)" depois dos metros sai, senão o termosT20 converteria de novo
+  assert.match(e.ataques[0].descricao, /alcance 1,5 m/);
+  assert.equal(porNome(e.habilidades, 'Resistência a Magia').oficial, 'resistenciaMagia');
+  assert.equal(porNome(e.habilidades, 'Resistência Lendária').usos, 3);
+  assert.equal(r.ator.system.resources.legact.max, 3);
+  assert.equal(porNome(e.habilidades, 'Rabada').execucao, 'special');
+});
+
+test('formato do pocketdm: largura da linha com pés entre parênteses', () => {
+  const e = ler(SITE).estado;
+  assert.equal(porNome(e.habilidades, 'Sopro de Lama').area, 'linha 9m x 1,5m');
+  assert.equal(porNome(e.habilidades, 'Jato Gélido').area, 'linha 18m x 3m');
+  assert.deepEqual(porNome(e.habilidades, 'Jato Gélido').dano, [{ formula: '3d6', tipo: 'frio' }]);
+});
+
+test('"Legendary Action Uses: 2" (layout 2024 em inglês) dá a quantidade sem aviso', () => {
+  const r = ler([
+    'Wisp', 'Small fey, neutral', 'STR 8 DEX 14 CON 10 INT 10 WIS 12 CHA 12', 'CR 2 (XP 450; PB +2)', 'Actions',
+    'Zap. Melee Attack Roll: +4, reach 5 ft. 5 (1d6 + 2) Lightning damage.',
+    'Legendary Actions',
+    'Legendary Action Uses: 2. Immediately after another creature\u2019s turn, the wisp can expend a use to take one of the following actions.',
+    'Dart. The wisp makes one Zap attack.',
+  ].join('\n'));
+  assert.equal(r.ator.system.resources.legact.max, 2);
+  assert.doesNotMatch(r.avisos.join('|'), /assumidas 3/);
+});
+
+// ---------- defeitos que só apareceram nas fichas reais do site ----------
+
+test('linha de tipo sem alinhamento (2014): "Médio humanoide (half-orc)" dá tamanho e tipo', () => {
+  const e = ler(['Druida', 'Médio humanoide (half-orc)', 'FOR 10 DES 12 CON 12 INT 11 SAB 16 CAR 10', 'Nível de Desafio 2 (450 XP)'].join('\n')).estado;
+  assert.deepEqual([e.tamanho, e.tipo], ['med', 'hum']);
+});
+
+test('"Pequeno ou Médio" e "Small or Medium" ficam com o maior; o enxame "Médio enxame de feras minúsculas" fica Médio', () => {
+  const bloco = (linha) => ler(['X', linha, 'STR 10 DEX 10 CON 10 INT 10 WIS 10 CHA 10', 'CR 1 (XP 200)'].join('\n')).estado;
+  assert.equal(bloco('Pequeno ou Médio humanoide (mago), neutro').tamanho, 'med');
+  assert.equal(bloco('Small or Medium Humanoid (Any Race), Any Alignment').tamanho, 'med');
+  assert.deepEqual([bloco('Médio enxame de feras minúsculas, sem alinhamento').tamanho, bloco('Médio enxame de feras minúsculas, sem alinhamento').tipo], ['med', 'ani']);
+});
+
+test('Multiataque com condição no nome ("Ataque Múltiplo (Só na Forma de Vampiro)") conta os ataques que também têm condição no nome', () => {
+  const e = ler([
+    'Vampiro', 'Médio morto-vivo, leal e mau', 'FOR 18 DES 18 CON 18 INT 17 SAB 15 CAR 18', 'Nível de Desafio 13 (10.000 XP)', 'Ações',
+    'Ataque Múltiplo (Só na Forma de Vampiro). O vampiro faz dois ataques de Golpe Sepulcral.',
+    'Golpe Sepulcral (Só na Forma de Vampiro). Ataque Corpo a Corpo: +9, alcance 1,5 m (5 ft). 8 (1d8 + 4) de dano de concussão mais 7 (2d6) de dano necrótico.',
+  ].join('\n')).estado;
+  assert.deepEqual(e.ataques.map((a) => [a.nome, a.qtd]), [['Golpe Sepulcral (Só na Forma de Vampiro)', 2]]);
+});
+
+test('rodapé das criaturas da comunidade do site não vira habilidade', () => {
+  const r = ler([
+    'Rato Sábio', 'Miúdo fera, sem alinhamento', 'FOR 2 DES 14 CON 10 INT 12 SAB 12 CAR 6', 'Nível de Desafio 1/8 (25 XP)', 'Fonte r/ Monster a Day',
+    'Faro Aguçado. O rato tem vantagem em testes de Percepção que dependam do olfato.',
+    'Criatura da comunidade r/monsteraday, usada em parceria. Não é conteúdo do SRD nem da Wizards of the Coast. Tradução em português e curadoria editorial © 2026 Pocket DM.',
+  ].join('\n'));
+  assert.deepEqual(r.avisos, []);
+  assert.deepEqual(r.estado.habilidades.map((h) => h.nome), ['Faro Aguçado']);
+  assert.doesNotMatch(r.estado.habilidades[0].texto, /comunidade/);
+});

@@ -311,3 +311,13 @@ Diferenças entre texto e JSON, por escolha:
 Heurísticas frágeis, avisadas no relatório quando duvidam: o fim do nome de uma habilidade (o texto colado perde o itálico; vale o primeiro ponto nos primeiros 60 caracteres, até 6 palavras, sem ":" nem dado), linha que começa em minúscula como continuação da anterior e linha sem nome como continuação da entrada da mesma seção.
 
 Não verificado: blocos reais de PDF com colunas misturadas; os blocos de teste versionados são inventados, e o gabarito contra os livros roda só localmente (`tests/origem-texto-gabarito.test.js`, com `tests/fixtures/*.txt`).
+
+### 13.1 Vocabulário em português conferido com o SRD do Pocket DM (0.5.1)
+
+Varridas 240 fichas de pocketdm.com.br/monstros (SRD 5.1 e 5.2 traduzidos): todas leem sem erro e sem exceção. A ficha copiada do navegador vem **uma linha por campo** (`FOR` / `24` / `(+7)` em linhas separadas), com lixo da página no meio: `2024`, `(clique para alterar a edição)`, `Fonte ...`, o rodapé de licença e, nas criaturas da comunidade, "Criatura da comunidade ...".
+
+Termos do site: rótulo `Movimento` (não "Deslocamento"), `nado`, `escavação`, `voo`, `escalada`; tipos `feérico`, `gosma`, `ínfero (diabo)`, `morto-vivo`; dano `concussão` (63 usos contra 11 de `contundente`), `ígneo`, `gélido`, `elétrico`, `trovejante`, `venenoso`, `força`; condições `Imobilizado (Grappled)`, `Contido (Restrained)`, `Caído (Prone)`, `Incapacitado`; sentidos `visão às cegas`, `visão no escuro`, `visão verdadeira`, `sismiconsciência`; `Usos de Ação Lendária: 3 (4 no Covil)`; áreas `Linha de 9 m (30 ft) de comprimento por 1,5 m (5 ft) de largura`. O dano do ataque vem **sem "Acerto:"** na 5.2 (`Ataque Corpo a Corpo: +9, alcance 3 m (10 ft). 12 (2d6 + 5) de dano de concussão.`) e a 2014 em português não tem alinhamento em "Médio humanoide (half-orc)".
+
+O que só apareceu nas fichas reais: o "(10 ft)" depois dos metros faria o `termosT20` da v2 converter de novo; "Pequeno ou Médio" fica com o maior; "Ataque Múltiplo (Só na Forma de Vampiro)" tem de ser reconhecido como Multiataque e o nome do ataque é procurado sem a condição entre parênteses. A maioria dos "Multiataque não cita" que sobra é legítima: o texto chama o ataque por outro nome ("ataques de pancada" contra um ataque "Golpe").
+
+Não adotado: o termo "corruptor" (Galápagos) e "percepção às cegas" ficam como sinônimos, mas o site usa `ínfero` e `visão às cegas`.

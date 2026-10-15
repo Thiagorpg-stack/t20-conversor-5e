@@ -43,6 +43,23 @@ test('multiataque da 2014: "one with its bite and two with its tentacles" e o po
   assert.equal(quantidadeNoMultiataque(pt, 'Tentáculo'), 2);
 });
 
+test('Resistência a Magia em português vira o poder oficial; a vantagem só contra "magia" em atributos mentais não', () => {
+  const feat = (name, texto) => ({ type: 'feat', name, system: { description: { value: texto } } });
+  const r = lerAtor5e(ator5e({ ator: { items: [
+    feat('Resistência a Magia', 'O golem tem vantagem em salvaguardas contra magias e outros efeitos mágicos.'),
+    feat('Resistência à Magia', 'A criatura tem vantagem nos testes de resistência contra magias e outros efeitos mágicos.'),
+    feat('Astúcia Gnômica', 'Hunter tem Vantagem em salvaguardas de Inteligência, Sabedoria e Carisma contra magia.'),
+  ] } }));
+  assert.deepEqual(r.estado.habilidades.map((h) => [h.nome, h.oficial]), [
+    ['Resistência a Magia', 'resistenciaMagia'], ['Resistência à Magia', 'resistenciaMagia'], ['Astúcia Gnômica', undefined],
+  ]);
+});
+
+test('multiataque: o nome do ataque com condição entre parênteses é procurado sem ela', () => {
+  assert.equal(quantidadeNoMultiataque('O vampiro faz dois ataques de Golpe Sepulcral.', 'Golpe Sepulcral (Só na Forma de Vampiro)'), 2);
+  assert.equal(quantidadeNoMultiataque('The vampire makes two Grave Strike attacks.', 'Grave Strike (Vampire Form Only)'), 2);
+});
+
 test('rejeita o que não é NPC do dnd5e', () => {
   assert.deepEqual(lerAtor5e({ type: 'character', system: {} }), { ok: false, erro: 'T20C5E.ErroImportarNpc' });
   assert.equal(lerAtor5e(null).ok, false);

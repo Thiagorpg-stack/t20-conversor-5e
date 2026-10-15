@@ -106,7 +106,7 @@ function danoExtraDe(item, modDe) {
 const NUMERO_EN = 'one|two|three|four|five|six|seven|eight|nine|ten|\\d+';
 const NUMERO_PT = 'uma?|dois|duas|tr[eê]s|quatro|cinco|seis|sete|oito|nove|dez|\\d+';
 export function quantidadeNoMultiataque(texto, nome) {
-  const n = String(nome).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const n = String(nome).replace(/\s*\([^)]*\)\s*$/, '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); // sem a condição "(Só na Forma de Vampiro)"
   const m = [
     `\\b(${NUMERO_EN})\\s+(?:(?:melee|ranged|weapon)\\s+)?${n}s?\\b`,
     `\\b(${NUMERO_EN})\\s+with\\s+(?:its|his|her|their)\\s+${n}s?\\b`,
@@ -357,7 +357,7 @@ export function lerAtor5e(ator, { pvSoloNoND } = {}) {
     const usos = usosDe(i, s.resources);
     const texto = textoT20(i.system?.description?.value, nomesPorId);
     const oficial = /^spellcasting$/i.test(i.name) || i.system?.identifier === 'spellcasting' ? 'magias'
-      : /advantage on saving throws against (?:spells|magic)/i.test(texto) ? 'resistenciaMagia' : undefined;
+      : /advantage on saving throws against (?:spells|magic)|vantagem (?:em|nos?) (?:salvaguardas|testes de resist[eê]ncia) contra magias/i.test(texto) ? 'resistenciaMagia' : undefined;
     const habilidade = {
       ...(oficial && { oficial }),
       ...(areaDe(i) && { area: areaDe(i) }),
