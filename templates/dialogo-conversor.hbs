@@ -19,6 +19,7 @@
   {{/if}}
   <fieldset>
     <legend>{{localize "T20C5E.SecaoCriatura"}}</legend>
+    <p class="conversor__nota">{{localize "T20C5E.NotaCriatura"}}</p>
     <div class="conversor__linha">
       <label class="conversor__largo">{{localize "T20C5E.Nome"}}
         <input type="text" name="nome" value="{{e.nome}}" placeholder="{{localize 'T20C5E.NomeDica'}}">
@@ -30,7 +31,7 @@
         <select name="papel">{{#each papeis}}<option value="{{valor}}" {{#if selecionado}}selected{{/if}}>{{rotulo}}</option>{{/each}}</select>
       </label>
     </div>
-    <label>{{localize "T20C5E.Conceito"}}
+    <label title="{{localize 'T20C5E.ConceitoDica'}}">{{localize "T20C5E.Conceito"}}
       <textarea name="conceito" rows="2">{{e.conceito}}</textarea>
     </label>
     <div class="conversor__linha">
@@ -77,10 +78,8 @@
 
   <fieldset>
     <legend>{{localize "T20C5E.SecaoRitmo"}}</legend>
+    <p class="conversor__nota">{{localize "T20C5E.NotaRitmo"}}</p>
     <div class="conversor__linha">
-      <label>{{localize "T20C5E.NivelGrupo"}}
-        <input type="number" name="nivelGrupo" value="{{e.nivelGrupo}}" min="0" max="20" placeholder="—" title="{{localize 'T20C5E.NivelGrupoDica'}}">
-      </label>
       <label class="conversor__largo">{{localize "T20C5E.Ritmo"}}
         <select name="ritmo">{{#each ritmos}}<option value="{{valor}}" {{#if selecionado}}selected{{/if}}>{{rotulo}}</option>{{/each}}</select>
       </label>
@@ -169,6 +168,17 @@
     <p class="conversor__nota">{{localize "T20C5E.SemPoderes"}}</p>
     {{/each}}
     <button type="button" data-action="addPoder"><i class="fas fa-plus"></i> {{localize "T20C5E.AddPoder"}}</button>
+  </fieldset>
+  <fieldset class="conversor__itens">
+    <legend>{{localize "T20C5E.SecaoItensExtras"}}</legend>
+    <p class="conversor__nota">{{localize "T20C5E.ItensExtrasDica"}}</p>
+    {{#each itensExtras}}
+    <div class="conversor__linha conversor__item">
+      <img src="{{img}}" alt="" width="24" height="24">
+      <span class="conversor__largo">{{nome}} <em>({{tipo}})</em></span>
+      <button type="button" data-action="removerItemExtra" data-indice="{{indice}}" title="{{localize 'T20C5E.Remover'}}"><i class="fas fa-trash"></i></button>
+    </div>
+    {{/each}}
   </fieldset>
 
   {{#if erros.length}}

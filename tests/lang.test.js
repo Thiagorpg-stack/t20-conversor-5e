@@ -23,3 +23,10 @@ test('lang: todo texto usado no template e no código existe', () => {
   const faltam = [...usadas].filter((k) => !(k in lang));
   assert.deepEqual(faltam, []);
 });
+
+test('o nível do grupo saiu: sem configuração, sem campo na tela e sem textos soltos no idioma', () => {
+  assert.doesNotMatch(ler('../scripts/main.js'), /nivelGrupo/);
+  assert.doesNotMatch(ler('../templates/dialogo-conversor.hbs'), /nivelGrupo|alternarCalibragem/);
+  const sobras = chaves.filter((k) => /NivelGrupo|Calibrar|CalibradoIgual|ConfigNivel|Erro\.nivelGrupo/.test(k));
+  assert.deepEqual(sobras, []);
+});

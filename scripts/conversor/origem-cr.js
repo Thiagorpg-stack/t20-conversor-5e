@@ -2,6 +2,7 @@
 // Função pura: os erros voltam como códigos (nome, cr, papel...), que o diálogo traduz.
 import { parseCR, CODIGOS_TAMANHO, CODIGOS_TIPO, CHAVES_DANO } from './mapeamentos.js';
 import { RITMOS, xpDoCR } from './ritmo.js';
+import { TIPOS_ITEM_EXTRA } from './itens-extras.js';
 
 export const ATRIBUTOS = ['for', 'des', 'con', 'int', 'sab', 'car'];
 export const PAPEIS_TABELA = ['solo', 'lacaio', 'especial'];
@@ -64,13 +65,6 @@ export function criaturaDeFormulario(f) {
   if (!CODIGOS_TAMANHO.includes(f.tamanho)) erros.push('tamanho');
   if (!CODIGOS_TIPO.includes(f.tipo)) erros.push('tipo');
 
-  const nivelTexto = String(f.nivelGrupo ?? '').trim();
-  let nivelGrupo = null;
-  if (nivelTexto !== '' && nivelTexto !== '0') {
-    nivelGrupo = inteiro(nivelTexto, NaN);
-    if (Number.isNaN(nivelGrupo) || nivelGrupo < 1 || nivelGrupo > 20) erros.push('nivelGrupo');
-  }
-
   const deslocamento = Number(f.deslocamento ?? 9);
   if (!(deslocamento >= 0)) erros.push('deslocamento');
 
@@ -119,7 +113,10 @@ export function criaturaDeFormulario(f) {
     })
     .filter((h) => h.nome);
 
-  if (erros.length) return { ok: false, erros };
+  // O ND só depende de CR, papel e ritmo: com só o nome (ou outro campo) faltando, a tela ainda mostra o ND.
+  const parametrosND = ['cr', 'papel', 'ritmo'].some((c) => erros.includes(c))
+    ? null : { papel: f.papel, cr: crNumero, ritmo: f.ritmo };
+  if (erros.length) return { ok: false, erros, parametrosND };
   return {
     ok: true,
     erros: [],
@@ -130,7 +127,6 @@ export function criaturaDeFormulario(f) {
       token: String(f.token ?? '').trim(),
       cr: crNumero,
       papel: f.papel,
-      nivelGrupo,
       ritmo: f.ritmo,
       tamanho: f.tamanho,
       tipo: f.tipo,
@@ -139,6 +135,7 @@ export function criaturaDeFormulario(f) {
       atributos,
       ataques,
       habilidades,
+      itensExtras: Array.isArray(f.itensExtras) ? f.itensExtras.filter((i) => TIPOS_ITEM_EXTRA.includes(i?.type)) : [],
       sentidos: { value: lista(f.sentidos?.value), custom: String(f.sentidos?.custom ?? '').trim() },
       idiomas: lista(f.idiomas),
       idiomasCustom: String(f.idiomasCustom ?? '').trim(),

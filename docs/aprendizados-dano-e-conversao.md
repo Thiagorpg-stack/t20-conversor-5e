@@ -322,6 +322,11 @@ O que só apareceu nas fichas reais: o "(10 ft)" depois dos metros faria o `term
 
 Não adotado: o termo "corruptor" (Galápagos) e "percepção às cegas" ficam como sinônimos, mas o site usa `ínfero` e `visão às cegas`.
 
+### 13.3 Diálogo: calibragem recolhida e itens arrastados (0.6.0)
+
+- **Nível do grupo removido do diálogo** (0.6.0): com o ritmo T20 a fórmula devolve o ND do CR e o nível só movia o ND nos extremos (CR 5, Solo: nível 1 → ND 4, níveis 3 a 8 → ND 5, nível 12 → ND 7). Ficou o ritmo, sempre visível, que muda o ND de verdade (CR 5: T20 → 5, intermediário → 4, estilo 5e → 3). `calcularND` ainda aceita `nivelGrupo` (com testes), mas o diálogo não o envia; a configuração do módulo e a flag `nivelGrupo` dos atores criados saíram. Antes disso: o ND era igual ao CR por padrão e nível e ritmo ficavam em "Calibrar pelo nível do grupo (opcional)", recolhido; com nível preenchido o bloco abre sozinho. O ritmo muda o ND mesmo com o nível vazio (`calcularND`: Q alvo = Q(ref) × 1,5 ÷ k).
+- **Itens arrastados**: soltar `{ type: 'Item', uuid }` na janela; só `poder` e `magia` (`itens-extras.js`). O Ajustar ND conta esses tipos na faixa de habilidades e só reescreve o dano de poderes com a flag `danoPoder`, então o item entra intacto. Arma fica de fora: o balanceamento lê a lista de ataques do diálogo. **Não verificado no Foundry**: o caminho de `getDragEventData` (v13 e v14) e o soltar a partir do compêndio.
+
 ### 13.2 Teste de resistência e cura (0.5.2)
 
 - No Tormenta20 **"salvaguarda" é "teste de resistência"** e todo teste é Fortitude, Reflexos ou Vontade. A tabela atributo → categoria (`periciaDoAtributo5e`) passou a levar **Força para Fortitude** (antes ia para Atletismo, que não é teste de resistência). O texto dos poderes em português passa por `trocarSalvaguardaPt`: "Salvaguarda de Constituição: CD 14" → "Teste de Fortitude: CD 14"; "uma salvaguarda" → "um teste de resistência" (o artigo concorda com "teste"); "salvaguardas de Inteligência, Sabedoria e Carisma" → "testes de Vontade"; o "teste de resistência de Destreza" da tradução antiga → "teste de Reflexos". Vale também para o JSON em português (passa pelo mesmo `textoT20`).

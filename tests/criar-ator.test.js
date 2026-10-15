@@ -5,7 +5,7 @@ import { montarDadosAtor, ataquesPorArmaDe, rdDoND, ID_CONVERSOR } from '../scri
 import { CODIGOS_TAMANHO, CODIGOS_TIPO, CHAVES_DANO, mapearTamanho, mapearTipo, mapearTipoDano } from '../scripts/conversor/mapeamentos.js';
 
 const formulario = (extra = {}) => ({
-  nome: ' Lobo Gigante ', conceito: 'Caçador <rápido>', cr: '3', papel: 'solo', nivelGrupo: '',
+  nome: ' Lobo Gigante ', conceito: 'Caçador <rápido>', cr: '3', papel: 'solo',
   ritmo: 'estilo5e', tamanho: 'gra', tipo: 'ani', deslocamento: '12',
   atributos: { for: '3', des: '2', con: '2', int: '-4', sab: '1', car: '-1' },
   ataques: [
@@ -37,18 +37,17 @@ test('formulário válido vira criatura neutra', () => {
   const c = r.criatura;
   assert.equal(c.nome, 'Lobo Gigante');
   assert.equal(c.cr, 3);
-  assert.equal(c.nivelGrupo, null);
+  assert.equal('nivelGrupo' in c, false); // o nível do grupo saiu do conversor
   assert.deepEqual(c.atributos, { for: 3, des: 2, con: 2, int: -4, sab: 1, car: -1 });
   assert.deepEqual(c.ataques[0], { nome: 'Mordida', distancia: false, tipoDano: 'perfuracao', qtd: 2, descricao: '', danoExtra: [], proporcaoExtra: 0, extraNoBalanceamento: true });
   assert.deepEqual(c.habilidades, []);
   assert.equal(c.ataques[1].distancia, true);
 });
 
-test('nível do grupo: vazio e 0 significam "não informado"; fora de 1 a 20 é erro', () => {
-  assert.equal(criaturaDeFormulario(formulario({ nivelGrupo: '0' })).criatura.nivelGrupo, null);
-  assert.equal(criaturaDeFormulario(formulario({ nivelGrupo: '10' })).criatura.nivelGrupo, 10);
-  assert.deepEqual(criaturaDeFormulario(formulario({ nivelGrupo: '25' })).erros, ['nivelGrupo']);
-  assert.deepEqual(criaturaDeFormulario(formulario({ nivelGrupo: 'x' })).erros, ['nivelGrupo']);
+test('nível do grupo não existe mais: um valor solto no formulário é ignorado, sem erro', () => {
+  const r = criaturaDeFormulario(formulario({ nivelGrupo: '99' }));
+  assert.equal(r.ok, true);
+  assert.equal('nivelGrupo' in r.criatura, false);
 });
 
 test('erros de validação voltam como códigos', () => {
@@ -93,7 +92,7 @@ test('dados do ator: campos do sistema, tamanho do token e flag de rastreio', ()
   assert.equal(d.prototypeToken.name, 'Lobo Gigante');
   assert.equal(d.system.detalhes.biography.value, '<p>Caçador &lt;rápido&gt;</p>');
   assert.deepEqual(d.flags[ID_CONVERSOR], {
-    origem: 'cr', cr: 3, ritmo: 'estilo5e', nivelGrupo: null, ndReferencia: '3', criadoEm: '2026-10-11T00:00:00.000Z',
+    origem: 'cr', cr: 3, ritmo: 'estilo5e', ndReferencia: '3', criadoEm: '2026-10-11T00:00:00.000Z',
   });
 });
 
@@ -224,4 +223,30 @@ test('cada ator novo traz um modelo independente (sem estado compartilhado)', ()
   assert.equal(b.system.atributos.for.base, 3);
   assert.equal(a.system.pericias.luta.atributo, 'for');
   assert.equal(Object.keys(a.system.pericias).length, 34);
+});
+
+const extraPoder = { name: 'Sopro Arrastado', type: 'poder', img: 'icons/svg/aura.svg', effects: [{ name: 'Efeito' }], flags: { [ID_CONVERSOR]: { extra: true } }, system: { rolls: [] } };
+
+test('itens arrastados: entram na ficha depois das armas e poderes, com id novo, e o formulário descarta o que não é poder ou magia', () => {
+  const { criatura } = criaturaDeFormulario(formulario({ itensExtras: [extraPoder, { ...extraPoder, name: 'Espada', type: 'arma' }, null] }));
+  assert.deepEqual(criatura.itensExtras.map((i) => i.name), ['Sopro Arrastado']);
+  const dados = montarDadosAtor(criatura, { nd: '3', gerarId });
+  const nomes = dados.items.map((i) => i.name);
+  assert.equal(nomes.at(-1), 'Sopro Arrastado');
+  assert.equal(dados.items.filter((i) => i.type === 'arma').length, 2); // só as armas dos ataques
+  const extra = dados.items.at(-1);
+  assert.match(extra._id, /^id\d+$/);
+  assert.deepEqual(extra.effects, [{ name: 'Efeito' }]);
+  assert.equal(extraPoder._id, undefined); // o item do estado não é alterado
+  assert.equal(new Set(dados.items.map((i) => i._id)).size, dados.items.length);
+  assert.deepEqual(criaturaDeFormulario(formulario()).criatura.itensExtras, []);
+});
+
+test('criaturaDeFormulario: sem o nome, devolve os parâmetros do ND; com CR ou ritmo inválido, não', () => {
+  const sem = criaturaDeFormulario(formulario({ nome: '', cr: '5', ritmo: 't20' }));
+  assert.equal(sem.ok, false);
+  assert.deepEqual(sem.parametrosND, { papel: 'solo', cr: 5, ritmo: 't20' });
+  assert.equal(criaturaDeFormulario(formulario({ nome: '', cr: 'xx' })).parametrosND, null);
+  assert.equal(criaturaDeFormulario(formulario({ nome: '', ritmo: 'inexistente' })).parametrosND, null);
+  assert.equal(criaturaDeFormulario(formulario()).ok, true);
 });

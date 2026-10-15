@@ -31,7 +31,7 @@ const ajusteNd = {
 };
 globalThis.game = {
   i18n: { localize: (k) => k, format: (k) => k },
-  settings: { get: (_m, chave) => ({ nivelGrupo: 10, ritmo: 'estilo5e' }[chave]) },
+  settings: { get: (_m, chave) => ({ ritmo: 'estilo5e' }[chave]) },
   modules: { get: () => ajusteNd },
 };
 globalThis.CONFIG = {
@@ -40,9 +40,10 @@ globalThis.CONFIG = {
 
 const { DialogoConversor } = await import('../scripts/dialogo-conversor.js');
 
-test('o diálogo começa com os padrões da campanha (nível e ritmo)', () => {
+test('o diálogo começa com o ritmo padrão da campanha, e sem nível do grupo nem calibragem', () => {
   const d = new DialogoConversor();
-  assert.equal(d.estado.nivelGrupo, 10);
+  for (const campo of ['nivelGrupo', 'calibrarAberto']) assert.equal(campo in d.estado, false);
+  assert.equal('alternarCalibragem' in DialogoConversor.DEFAULT_OPTIONS.actions, false);
   assert.equal(d.estado.ritmo, 'estilo5e');
   assert.equal(d.estado.papel, 'solo');
 });
@@ -238,4 +239,81 @@ test('botão "Colar texto": alterna o campo de texto sem perder o que já foi di
   assert.deepEqual([d.estado.textoAberto, d.estado.texto5e, desenhos], [true, 'bloco colado', 1]);
   await alternar.call(d);
   assert.deepEqual([d.estado.textoAberto, d.estado.texto5e, desenhos], [false, 'bloco colado', 2]); // fechar não apaga o texto
+});
+
+test('sem o nome da criatura o ND já é calculado e mostrado (referência, calibrado e o campo ND)', async () => {
+  const d = new DialogoConversor();
+  Object.assign(d.estado, { nome: '', cr: '5', papel: 'solo', ritmo: 't20' });
+  d.tocado = true;
+  const ctx = await d._prepareContext();
+  assert.equal(ctx.erros.length, 1); // só falta o nome
+  assert.equal(ctx.referencia, '5');
+  assert.ok(ctx.calibrado, 'ND calibrado calculado');
+  assert.equal(ctx.nds.filter((n) => n.selecionado).length, 1);
+  d.estado.cr = 'xx'; // CR inválido: não há ND para mostrar
+  assert.equal((await d._prepareContext()).referencia, undefined);
+});
+
+test('o diálogo preserva a rolagem da janela ao se redesenhar', () => {
+  // O elemento da parte já é a <section class="conversor"> que rola: seletor vazio = a própria parte (um seletor filho não a acharia).
+  assert.deepEqual(DialogoConversor.PARTS.corpo.scrollable, ['']);
+});
+
+// Soltar poder ou magia na janela: o Foundry entrega { type: 'Item', uuid }, que o diálogo resolve com fromUuid.
+function dialogoComZona(arrasto, itens) {
+  const d = new DialogoConversor();
+  d.desenhos = 0;
+  d.render = async () => { d.desenhos += 1; };
+  const zona = { ouvintes: {}, addEventListener(tipo, f) { this.ouvintes[tipo] = f; } };
+  d.element = { querySelectorAll: () => [], querySelector: (s) => (s === '.conversor' ? zona : null) };
+  d._onRender();
+  foundry.applications.ux = { TextEditor: { implementation: { getDragEventData: () => arrasto } } };
+  globalThis.fromUuid = async (uuid) => itens[uuid] ?? null;
+  const avisos = [];
+  globalThis.ui = { notifications: { warn: (m) => avisos.push(m) } };
+  game.i18n.format = (chave, dados) => `${chave}:${JSON.stringify(dados)}`;
+  return { d, zona, avisos, soltar: () => zona.ouvintes.drop({ preventDefault() {} }) };
+}
+const itemFalso = (type, name = 'Sopro') => ({ type, name, toObject: () => ({ _id: 'x', name, type, flags: {}, system: {} }) });
+
+test('soltar um poder na janela: entra em itensExtras e o diálogo se redesenha; arrastar sobre a janela é permitido', async () => {
+  const { d, zona, soltar } = dialogoComZona({ type: 'Item', uuid: 'U1' }, { U1: itemFalso('poder') });
+  let impedido = false;
+  zona.ouvintes.dragover({ preventDefault: () => { impedido = true; } });
+  assert.equal(impedido, true);
+  await soltar();
+  assert.deepEqual(d.estado.itensExtras.map((i) => [i.name, i.type, '_id' in i]), [['Sopro', 'poder', false]]);
+  assert.equal(d.desenhos, 1);
+});
+
+test('soltar arma, item que não abre ou algo que não é item: não entra; só os dois primeiros avisam', async () => {
+  const arma = dialogoComZona({ type: 'Item', uuid: 'U2' }, { U2: itemFalso('arma', 'Espada') });
+  await arma.soltar();
+  assert.deepEqual([arma.d.estado.itensExtras.length, arma.d.desenhos], [0, 0]);
+  assert.match(arma.avisos[0], /AvisoItemNaoSuportado.*arma/);
+  const sumido = dialogoComZona({ type: 'Item', uuid: 'U3' }, {});
+  await sumido.soltar();
+  assert.match(sumido.avisos[0], /AvisoItemNaoSuportado.*\?/);
+  const ator = dialogoComZona({ type: 'Actor', uuid: 'A1' }, {});
+  await ator.soltar();
+  assert.deepEqual([ator.avisos.length, ator.d.estado.itensExtras.length], [0, 0]);
+});
+
+test('"remover" tira o item arrastado pelo índice, sem mexer nos outros', async () => {
+  const { d } = dialogoComZona(null, {});
+  d.estado.itensExtras = [{ name: 'A', type: 'poder' }, { name: 'B', type: 'magia' }];
+  await DialogoConversor.DEFAULT_OPTIONS.actions.removerItemExtra.call(d, null, { dataset: { indice: '0' } });
+  assert.deepEqual(d.estado.itensExtras.map((i) => i.name), ['B']);
+  assert.equal((await d._prepareContext()).itensExtras[0].nome, 'B');
+});
+
+test('o ritmo muda o ND (T20 = CR; mais combates por descanso, ND menor) e o ND manual é respeitado', async () => {
+  const d = new DialogoConversor();
+  Object.assign(d.estado, { nome: 'Lobo', cr: '5', papel: 'solo', ritmo: 't20' });
+  const t20 = await d._prepareContext();
+  assert.deepEqual([t20.referencia, t20.calibrado], ['5', '5']);
+  d.estado.ritmo = 'estilo5e';
+  const cinco = await d._prepareContext();
+  assert.deepEqual([cinco.referencia, cinco.calibrado], ['5', '3']);
+  assert.equal('calibradoIgual' in cinco || 'calibrarVisivel' in cinco, false);
 });

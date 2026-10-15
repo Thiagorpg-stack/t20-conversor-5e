@@ -5,7 +5,7 @@ Módulo para Foundry VTT que converte criaturas de **D&D 5e** em ameaças de **T
 [![Video Title](https://img.youtube.com/vi/oGsEAPHrdFo/0.jpg)](https://www.youtube.com/watch?v=oGsEAPHrdFo)
 [![Video Title](https://img.youtube.com/vi/30FP5qsoHQs/0.jpg)](https://www.youtube.com/watch?v=30FP5qsoHQs)
 
-> **Status: v0.5.3 (em teste).** A v1, "Criar ameaça a partir de CR", a v2, "Importar JSON de 5e", e a v3, "Colar bloco de estatísticas", estão implementadas.
+> **Status: v0.6.0 (em teste).** A v1, "Criar ameaça a partir de CR", a v2, "Importar JSON de 5e", e a v3, "Colar bloco de estatísticas", estão implementadas.
 
 Exige o Ajustar ND 0.10.2.
 
@@ -14,6 +14,7 @@ Exige o Ajustar ND 0.10.2.
 ## O que já faz
 
 - Converte os **números** (ND, papel, PV, Defesa, CD, ataque, resistências e dano), pela tabela.
+- **Arrastar poderes e magias**: arraste um poder ou uma magia do Tormenta20 (compêndio, outra ficha ou diretório de itens) para a janela do conversor e ele entra na ficha em criação, na lista "Itens arrastados". O item entra como está (o dano dele não é recalculado pelo ND) e conta na faixa de habilidades do Ajustar ND. Armas e itens de outros sistemas são recusados com aviso.
 - **Texto colado (v3)**: cola o bloco de estatísticas de uma criatura (livro, site ou PDF; inglês ou português; layouts de 2014 e de 2024) e o módulo preenche o formulário como na importação de JSON. Lê nome, tamanho, tipo, CR, deslocamentos, atributos, sentidos, idiomas, resistências, imunidades, ataques com dano e dano extra, quantidades do Multiataque, poderes com dano, teste de resistência, área, usos e recarga, ações lendárias e de covil, e o atributo de conjuração. Não lê imagem nem token, nem a CA; o PV só ajuda a sugerir o papel. O relatório diz o que foi lido e o que pede revisão. O vocabulário em português foi conferido com o SRD traduzido do [Pocket DM](https://pocketdm.com.br/monstros) (a ficha copiada de lá é lida como está) e com os termos da tradução da Galápagos. **Salvaguarda** vira **teste de resistência** e o atributo vira a categoria do T20: "Salvaguarda de Constituição: CD 14" fica "Teste de Fortitude: CD 14" (Força e Constituição → Fortitude, Destreza → Reflexos, Inteligência, Sabedoria e Carisma → Vontade). Cura ("recupera 5 (1d10) Pontos de Vida") não é lida como dano.
 - Entrega as habilidades, magias e ações lendárias; não traduz regras.
 - **Poderes com dano** (sopro, constrição, rugido...): lê o dano (dado, bônus, tipo) e o teste de resistência da 5e, troca "Constitution Saving Throw" por "Fortitude" (e os demais atributos pela perícia do T20), cria a rolagem de dano no poder e marca o poder para o Ajustar ND recalcular o dano pela tabela. Por poder, o diálogo permite desligar o ajuste ("Ajustar o dano pela tabela do ND") e escolher se tem efeito (condição, teste de resistência ou área). Carisma e Inteligência viram Vontade (padrão assumido).
@@ -28,20 +29,20 @@ Exige o Ajustar ND 0.10.2.
 - **Texto das armas**: depois do ajuste de ND, a descrição da arma troca o bônus de ataque e o dano da 5e ("Attack Roll: +12 ... Hit: 16 (2d8 + 7 Slashing) damage") pelos valores finais da ficha. Só na criação: um ajuste de ND posterior não reescreve a descrição.
 - **Perícias protegidas**: no Tormenta20 1.6.6 (Foundry 14), atualizar um campo de uma perícia a redefine para o padrão (atributo FOR, outros 0); o formulário da ficha faz isso ao fechá-la. Nos atores criados por este módulo as atualizações são completadas com os valores atuais.
 - **Ao criar o ator**, os atributos das perícias voltam aos da regra e o ajuste de ND roda duas vezes, para o que a ficha mostra bater com a tabela.
-- Calcula o ND com uma **calibração de ritmo**: um grupo de T20 aguenta 1 a 2 combates do seu ND por descanso, e em 5e o dia de aventura espera 6 a 8. O mestre informa o nível do grupo e o ritmo desejado.
+- Calcula o ND com uma **calibração de ritmo**: um grupo de T20 aguenta 1 a 2 combates do seu ND por descanso, e em 5e o dia de aventura espera 6 a 8. O mestre escolhe o ritmo (combates por descanso); com o ritmo T20 o ND é igual ao CR.
 
 ## Como usar
 
 1. Como Mestre, abra o diretório de atores e clique em **5e para T20**.
 2. Importar o JSON de um ator de 5e exportado de outro mundo.
-3. Informe o **nível do grupo** e o **ritmo do dia** (ou deixe o nível vazio para usar o ND de referência do CR). O módulo mostra o ND de referência e o ND calibrado, e você pode escolher outro.
+3. Escolha o **ritmo do dia** (quantos combates o grupo faz por descanso). O módulo mostra o ND de referência e o ND calibrado pelo ritmo, e você pode escolher outro no campo ND.
 4. Confira a prévia (PV, CD, Defesa, ataque, resistências e dano por golpe, com avisos) e clique em **Criar ameaça**. O ator é criado na pasta "Convertidos de 5e".
 
-O nível do grupo e o ritmo padrão ficam nas configurações do módulo.
+O ritmo padrão fica nas configurações do módulo.
 
 ### Colar o texto de uma criatura (v3)
 
-1. No diálogo, clique em **Colar texto de 5e** e cole o bloco inteiro de **uma** criatura.
+1. No diálogo, clique em **Colar Texto** e cole o bloco inteiro de **uma** criatura.
 2. Clique em **Ler texto**. O formulário é preenchido e o relatório mostra o que foi lido, o que pede revisão e o que ficou de fora.
 3. Confira o CR, o papel e os ataques (principalmente a quantidade de cada ataque e o fim do nome de cada habilidade: o texto colado perde o itálico, então o módulo deduz onde o nome acaba) e crie a ameaça como de costume.
 

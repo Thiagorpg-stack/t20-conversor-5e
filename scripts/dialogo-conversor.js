@@ -4,6 +4,7 @@ import { obterApi } from './api-ajuste-nd.js';
 import { calcularND, linhaDoND, RITMOS } from './conversor/ritmo.js';
 import { lerAtor5e } from './conversor/origem-json.js';
 import { textoParaAtor5e } from './conversor/origem-texto.js';
+import { itemExtraDe } from './conversor/itens-extras.js';
 import { PASTA_IMAGENS, nomeDoArquivo, ehUrl, tokenDoCdn5e, urlsCandidatas } from './conversor/imagem.js';
 import { papelDoSistema, ndDeReferencia, CODIGOS_TAMANHO, CODIGOS_TIPO, CHAVES_DANO, NOME_DA_PERICIA } from './conversor/mapeamentos.js';
 import { criaturaDeFormulario, aplicarModoAtaques, poderDaTela, MODOS_ATAQUES, EXECUCOES, ATRIBUTOS } from './conversor/origem-cr.js';
@@ -23,7 +24,7 @@ const NOMES_DANO = {
 };
 const TESTES = { fort: 'Fortitude', refl: 'Reflexos', vont: 'Vontade' };
 const NOMES_ATRIBUTO = { for: 'FOR', des: 'DES', con: 'CON', int: 'INT', sab: 'SAB', car: 'CAR' };
-const CAMPOS_QUE_RECALCULAM_ND = ['cr', 'papel', 'nivelGrupo', 'ritmo'];
+const CAMPOS_QUE_RECALCULAM_ND = ['cr', 'papel', 'ritmo'];
 
 const t = (chave) => game.i18n.localize(chave);
 
@@ -73,18 +74,20 @@ export class DialogoConversor extends HandlebarsApplicationMixin(ApplicationV2) 
       importar5e: DialogoConversor.#importar5e,
       importarTexto: DialogoConversor.#lerTexto,
       alternarTexto: DialogoConversor.#alternarTexto,
+      removerItemExtra: DialogoConversor.#removerItemExtra,
       addPoder: DialogoConversor.#addPoder,
       removerPoder: DialogoConversor.#removerPoder,
     },
   };
 
-  static PARTS = { corpo: { template: `modules/${ID_CONVERSOR}/templates/dialogo-conversor.hbs` } };
+  // `scrollable`: o Foundry guarda e devolve a rolagem da janela quando ela se redesenha (senão voltaria ao topo a cada clique).
+  // O elemento da parte já é a <section class="conversor"> que rola, então o seletor é vazio (a própria parte).
+  static PARTS = { corpo: { template: `modules/${ID_CONVERSOR}/templates/dialogo-conversor.hbs`, scrollable: [''] } };
 
   constructor(options = {}) {
     super(options);
-    const nivelPadrao = Number(game.settings.get(ID_CONVERSOR, 'nivelGrupo')) || '';
     this.estado = {
-      nome: '', conceito: '', img: '', token: '', texto5e: '', textoAberto: false, cr: '5', papel: 'solo', nivelGrupo: nivelPadrao,
+      nome: '', conceito: '', img: '', token: '', texto5e: '', textoAberto: false, itensExtras: [], cr: '5', papel: 'solo',
       ritmo: game.settings.get(ID_CONVERSOR, 'ritmo'),
       nd: null, ndManual: false, chefeFinal: false, conjurador: false, conjuracao: 'int',
       tamanho: 'med', tipo: 'mon', deslocamento: 9,
@@ -112,11 +115,18 @@ export class DialogoConversor extends HandlebarsApplicationMixin(ApplicationV2) 
     const tabelas = await api.obterTabelas();
 
     const validacao = criaturaDeFormulario(e);
-    if (!validacao.ok) return { erros: validacao.erros.map((c) => this.#erroLegivel(c)) };
+    if (!validacao.ok) {
+      const erros = validacao.erros.map((c) => this.#erroLegivel(c));
+      const base = validacao.parametrosND;
+      if (!base) return { erros };
+      const calculo = calcularND({ tabelas, papel: base.papel, cr: base.cr, ritmo: base.ritmo });
+      if (!e.ndManual || !e.nd) e.nd = calculo.nd;
+      return { erros, calculo, ndReferencia: ndDeReferencia(base.cr) };
+    }
 
     const calculo = calcularND({
       tabelas, papel: validacao.criatura.papel, cr: validacao.criatura.cr,
-      nivelGrupo: validacao.criatura.nivelGrupo ?? undefined, ritmo: validacao.criatura.ritmo,
+      ritmo: validacao.criatura.ritmo,
     });
     const ndFinal = e.ndManual && e.nd ? e.nd : calculo.nd;
     e.nd = ndFinal;
@@ -172,6 +182,7 @@ export class DialogoConversor extends HandlebarsApplicationMixin(ApplicationV2) 
         indice: i, rotulo,
         opcoes: Object.entries(TESTES).map(([valor, nome]) => ({ valor, nome, selecionado: valor === e.ordem[i] })),
       })),
+      itensExtras: e.itensExtras.map((i, indice) => ({ indice, nome: i.name, tipo: i.type, img: i.img })),
       poderes: e.habilidades.map((h, indice) => ({
         indice, nome: h.nome, texto: h.texto,
         temDano: Boolean(h.dano?.length),
@@ -196,7 +207,14 @@ export class DialogoConversor extends HandlebarsApplicationMixin(ApplicationV2) 
       ctx.erros = [erro.message?.startsWith('T20C5E.') ? t(erro.message) : erro.message];
       return ctx;
     }
-    if (p.erros) { ctx.erros = this.tocado ? p.erros : []; return ctx; }
+    if (p.erros) {
+      ctx.erros = this.tocado ? p.erros : [];
+      if (p.calculo) { // faltam outros dados (o nome, por exemplo), mas o ND já vale
+        ctx.nds = NDS.map((v) => ({ valor: v, selecionado: v === e.nd }));
+        Object.assign(ctx, { referencia: p.ndReferencia, calibrado: p.calculo.nd, usouFormula: p.calculo.usouFormula });
+      }
+      return ctx;
+    }
 
     ctx.nds = NDS.map((v) => ({ valor: v, selecionado: v === p.ndFinal }));
     ctx.limiteAtaques = p.limiteAtaques;
@@ -265,7 +283,6 @@ export class DialogoConversor extends HandlebarsApplicationMixin(ApplicationV2) 
     e.texto5e = valor('texto5e') ?? e.texto5e;
     e.cr = valor('cr') ?? e.cr;
     e.papel = valor('papel') ?? e.papel;
-    e.nivelGrupo = valor('nivelGrupo') ?? e.nivelGrupo;
     e.ritmo = valor('ritmo') ?? e.ritmo;
     e.tamanho = valor('tamanho') ?? e.tamanho;
     e.tipo = valor('tipo') ?? e.tipo;
@@ -306,6 +323,10 @@ export class DialogoConversor extends HandlebarsApplicationMixin(ApplicationV2) 
   }
 
   _onRender() {
+    // Soltar um poder ou magia em qualquer lugar da janela (compêndio, outra ficha, diretório de itens).
+    const zona = this.element.querySelector('.conversor');
+    zona?.addEventListener('dragover', (ev) => ev.preventDefault());
+    zona?.addEventListener('drop', (ev) => this.#aoSoltar(ev));
     this.element.querySelectorAll('input:not([type=file]), select, textarea').forEach((campo) => {
       campo.addEventListener('change', (ev) => this.#aoMudar(ev));
     });
@@ -522,6 +543,25 @@ export class DialogoConversor extends HandlebarsApplicationMixin(ApplicationV2) 
   static async #addPoder() {
     this.#lerFormulario();
     this.estado.habilidades.push({ nome: '', texto: '', execucao: '' });
+    await this.render();
+  }
+
+  async #aoSoltar(ev) {
+    ev.preventDefault();
+    const leitor = foundry.applications.ux?.TextEditor?.implementation ?? TextEditor; // v13 e v14 / versões anteriores
+    const arrasto = leitor.getDragEventData(ev);
+    if (arrasto?.type !== 'Item') return;
+    const item = await fromUuid(arrasto.uuid);
+    const extra = item && itemExtraDe(item.toObject());
+    if (!extra) { ui.notifications.warn(game.i18n.format('T20C5E.AvisoItemNaoSuportado', { tipo: item?.type ?? '?' })); return; }
+    this.#lerFormulario();
+    this.estado.itensExtras.push(extra);
+    await this.render();
+  }
+
+  static async #removerItemExtra(_ev, alvo) {
+    this.#lerFormulario();
+    this.estado.itensExtras.splice(Number(alvo.dataset.indice), 1);
     await this.render();
   }
 

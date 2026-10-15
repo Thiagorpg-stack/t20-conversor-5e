@@ -139,11 +139,12 @@ export function montarDadosAtor(criatura, { nd, gerarId, pasta = null, ndReferen
     if (h.dano?.length) item.flags = { [ID_AJUSTE_ND]: { danoPoder: { ajustar: h.ajustarDano, efeito: h.efeito } } };
     return item;
   });
-  dados.items = [...armas, ...poderes];
+  const extras = (criatura.itensExtras ?? []).map((item) => ({ ...structuredClone(item), _id: gerarId() }));
+  dados.items = [...armas, ...poderes, ...extras];
 
   dados.flags = {
     [ID_CONVERSOR]: {
-      origem: 'cr', cr: criatura.cr, ritmo: criatura.ritmo, nivelGrupo: criatura.nivelGrupo,
+      origem: 'cr', cr: criatura.cr, ritmo: criatura.ritmo,
       ndReferencia, criadoEm: agora,
     },
   };
