@@ -114,7 +114,7 @@
   "T20C5E.ErroAjusteNdAusente": "O módulo Ajustar ND precisa estar instalado e ativo no mundo.",
   "T20C5E.ErroAjusteNdAntigo": "Atualize o módulo Ajustar ND para a versão 0.9.0 ou mais recente.",
   "T20C5E.ConfigRitmoNome": "Ritmo do dia",
-  "T20C5E.ConfigRitmoDica": "Quantos combates o grupo costuma enfrentar até descansar. Define o quanto o ND cai ao converter criaturas de 5e.",
+  "T20C5E.ConfigRitmoDica": "Quantos combates o grupo costuma enfrentar até descansar. Define o quanto o ND pode cair ao converter criaturas de 5e: no ritmo T20 ele fica igual ao CR, e com mais combates por descanso ele baixa.",
   "T20C5E.RitmoT20": "Estilo T20 (1 a 2 combates)",
   "T20C5E.RitmoIntermediario": "Intermediário (3 a 4 combates)",
   "T20C5E.RitmoEstilo5e": "Estilo 5e (6 a 8 combates)"
