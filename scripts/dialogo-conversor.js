@@ -72,6 +72,7 @@ export class DialogoConversor extends HandlebarsApplicationMixin(ApplicationV2) 
       baixarImagem: DialogoConversor.#baixarImagem,
       importar5e: DialogoConversor.#importar5e,
       importarTexto: DialogoConversor.#lerTexto,
+      alternarTexto: DialogoConversor.#alternarTexto,
       addPoder: DialogoConversor.#addPoder,
       removerPoder: DialogoConversor.#removerPoder,
     },
@@ -83,7 +84,7 @@ export class DialogoConversor extends HandlebarsApplicationMixin(ApplicationV2) 
     super(options);
     const nivelPadrao = Number(game.settings.get(ID_CONVERSOR, 'nivelGrupo')) || '';
     this.estado = {
-      nome: '', conceito: '', img: '', token: '', texto5e: '', cr: '5', papel: 'solo', nivelGrupo: nivelPadrao,
+      nome: '', conceito: '', img: '', token: '', texto5e: '', textoAberto: false, cr: '5', papel: 'solo', nivelGrupo: nivelPadrao,
       ritmo: game.settings.get(ID_CONVERSOR, 'ritmo'),
       nd: null, ndManual: false, chefeFinal: false, conjurador: false, conjuracao: 'int',
       tamanho: 'med', tipo: 'mon', deslocamento: 9,
@@ -475,6 +476,12 @@ export class DialogoConversor extends HandlebarsApplicationMixin(ApplicationV2) 
 
   static #importar5e() {
     this.element.querySelector('[data-importar]').click();
+  }
+
+  static async #alternarTexto() {
+    this.#lerFormulario();
+    this.estado.textoAberto = !this.estado.textoAberto;
+    await this.render();
   }
 
   static async #lerTexto() {

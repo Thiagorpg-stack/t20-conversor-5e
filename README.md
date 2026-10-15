@@ -5,7 +5,7 @@ Módulo para Foundry VTT que converte criaturas de **D&D 5e** em ameaças de **T
 [![Video Title](https://img.youtube.com/vi/oGsEAPHrdFo/0.jpg)](https://www.youtube.com/watch?v=oGsEAPHrdFo)
 [![Video Title](https://img.youtube.com/vi/30FP5qsoHQs/0.jpg)](https://www.youtube.com/watch?v=30FP5qsoHQs)
 
-> **Status: v0.5.2 (em teste).** A v1, "Criar ameaça a partir de CR", a v2, "Importar JSON de 5e", e a v3, "Colar bloco de estatísticas", estão implementadas.
+> **Status: v0.5.3 (em teste).** A v1, "Criar ameaça a partir de CR", a v2, "Importar JSON de 5e", e a v3, "Colar bloco de estatísticas", estão implementadas.
 
 Exige o Ajustar ND 0.10.2.
 
@@ -41,7 +41,7 @@ O nível do grupo e o ritmo padrão ficam nas configurações do módulo.
 
 ### Colar o texto de uma criatura (v3)
 
-1. No diálogo, abra "Ou colar o bloco de estatísticas como texto" e cole o bloco inteiro de **uma** criatura.
+1. No diálogo, clique em **Colar texto de 5e** e cole o bloco inteiro de **uma** criatura.
 2. Clique em **Ler texto**. O formulário é preenchido e o relatório mostra o que foi lido, o que pede revisão e o que ficou de fora.
 3. Confira o CR, o papel e os ataques (principalmente a quantidade de cada ataque e o fim do nome de cada habilidade: o texto colado perde o itálico, então o módulo deduz onde o nome acaba) e crie a ameaça como de costume.
 
