@@ -226,3 +226,16 @@ test('texto colado: o change do campo guarda o texto sem redesenhar o diálogo',
   assert.equal(d.estado.texto5e, 'bloco colado');
   assert.equal(desenhos, 0); // redesenhar no blur engole o primeiro clique em "Ler texto"
 });
+
+test('botão "Colar texto": alterna o campo de texto sem perder o que já foi digitado', async () => {
+  const d = new DialogoConversor();
+  let desenhos = 0;
+  d.render = async () => { desenhos += 1; };
+  d.element = { querySelectorAll: () => [], querySelector: (s) => (s === '[name=texto5e]' ? { value: 'bloco colado' } : null) };
+  const alternar = DialogoConversor.DEFAULT_OPTIONS.actions.alternarTexto;
+  assert.equal(d.estado.textoAberto, false);
+  await alternar.call(d);
+  assert.deepEqual([d.estado.textoAberto, d.estado.texto5e, desenhos], [true, 'bloco colado', 1]);
+  await alternar.call(d);
+  assert.deepEqual([d.estado.textoAberto, d.estado.texto5e, desenhos], [false, 'bloco colado', 2]); // fechar não apaga o texto
+});
