@@ -21,8 +21,8 @@ confere, ajusta CR, papel e ND, e cria a ameaça pelo caminho de sempre.
 
 ## Fora do escopo
 
-Mais de uma criatura por colagem, imagem e token, OCR, PV e CA do bloco (seguem vindo da tabela do ND),
-refatorar o `origem-json.js` num núcleo comum.
+Mais de uma criatura por colagem, imagem e token, OCR, CA do bloco, refatorar o `origem-json.js` num núcleo comum.
+O PV do bloco é lido só para a sugestão de papel (Lacaio), como na v2; o PV final continua vindo da tabela do ND.
 
 ## Design
 
@@ -44,11 +44,12 @@ Função pura, sem Foundry. Exporta `textoParaAtor5e(texto) → { ok, ator, avis
 - **Normalização:** `\r\n`, hifenização de fim de linha de PDF, linhas quebradas no meio de uma frase, aspas e
   travessões tipográficos, "−" (U+2212) como menos.
 - **Cabeçalho:** primeira linha não vazia = nome. A linha "Large Aberration, Neutral" / "Grande Aberração,
-  neutro" dá `traits.size` e `details.type.value`; o tipo é lido na tabela de tipos já usada em `mapeamentos.js`
-  (com os nomes em português acrescentados lá, se faltarem).
+  neutro" / "Dragão Médio, Neutro e Mau" dá `traits.size` e `details.type.value` (tamanho e tipo antes da vírgula,
+  em qualquer ordem). As tabelas de palavras EN/PT ficam em `origem-texto.js`; o resto da conversão segue nas
+  tabelas de `mapeamentos.js`, via `lerAtor5e`.
 - **Campos por rótulo** (tabela EN/PT no próprio módulo): CA, PV, deslocamento, atributos, testes, perícias,
   resistências, vulnerabilidades, imunidades a dano e a condições, sentidos, idiomas, CR/ND. Os rótulos são
-  reconhecidos em qualquer posição de linha, o que cobre 2014 e 2024. Atributos: o primeiro inteiro depois de
+  reconhecidos no começo de cada linha do cabeçalho (até a linha do CR), o que cobre 2014 e 2024. Atributos: o primeiro inteiro depois de
   cada sigla (FOR DES CON INT SAB CAR em PT), serve para "17 (+3)" e para "Str 21 +5 +5".
 - **Unidade:** "ft." mantém pés; "m", "metros" ou "m." marcam `movement.units = 'm'`. As distâncias em `senses`
   e `languages` seguem a unidade do bloco.
@@ -56,9 +57,10 @@ Função pura, sem Foundry. Exporta `textoParaAtor5e(texto) → { ok, ator, avis
   Reactions/Reações, Legendary Actions/Ações Lendárias, Lair Actions/Ações de Covil. A seção define
   `activation.type` do item (`action`, `bonus`, `reaction`, `legendary`, `lair`; traço = sem ativação).
 - **Entradas:** "Nome. texto". Como o texto colado perde o itálico, o fim do nome é heurístico: o primeiro ". "
-  nos primeiros 60 caracteres da entrada, ignorando o ponto de "(Recharge 5–6)" e de abreviações ("ft."). Sem esse
-  ponto, a linha inteira vira texto de um poder sem nome e o parser avisa. Se o nome tiver mais de 6 palavras, ele
-  também avisa.
+  nos primeiros 60 caracteres da entrada, ignorando o ponto de "(Recharge 5–6)" e de abreviações ("ft."). Nome com
+  mais de 6 palavras (sem contar parênteses), com ":" ou com dado de dano não é nome: a linha é continuação da
+  entrada anterior da mesma seção (listas de magias, "Hit: ..." quebrado). Sem entrada anterior, a linha é
+  descartada com aviso, salvo a introdução de Ações Lendárias e de Covil, que só informa a quantidade de ações.
 - **Cada entrada vira um item `feat`** com `description.value` em texto puro e:
   - **ataque:** "Melee/Ranged Weapon Attack" (2014), "Melee/Ranged Attack Roll" (2024) ou "Ataque Corpo a
     Corpo/à Distância com Arma" (PT) → atividade `attack` (`attack.type.value` `melee` ou `ranged`);
@@ -72,14 +74,18 @@ Função pura, sem Foundry. Exporta `textoParaAtor5e(texto) → { ok, ator, avis
   - **Multiataque:** identificado pelo nome (`multiattack` / `Multiataque`), com o `identifier` correspondente;
   - **Spellcasting/Conjuração:** `attributes.spellcasting` a partir de "spellcasting ability is Intelligence" /
     "atributo de conjuração é Inteligência".
+- **Reuso na v2:** `quantidadeNoMultiataque` (em `origem-json.js`) passa a entender números e a frase em português
+  ("dois ataques de Mordida e um ataque com a Garra"); é a única mudança no código da v2, além de o diálogo
+  repartir o `#importar`.
 - Tipos de dano em português (cortante, perfurante, contundente, ácido, ígneo/de fogo...) são traduzidos para as
   chaves do dnd5e antes de montar as partes; os do inglês passam direto para `mapearTipoDano`.
 
 ### 3. Avisos e erros
 
-- O parser devolve `avisos` (linhas "revisar" do relatório): fim de nome duvidoso, rótulo reconhecido sem
-  valor legível, dano que não bate com o padrão, idioma não detectado (assume inglês). Entram antes do
-  relatório do `lerAtor5e`.
+- O parser devolve `avisos` (linhas "revisar" do relatório): nome não encontrado na primeira linha, atributos
+  não encontrados (assumido 10), lista de resistências sem nenhuma palavra reconhecida, linha solta sem nome de
+  habilidade descartada, Ações Lendárias sem a quantidade (assumidas 3). Entram antes do relatório do
+  `lerAtor5e`, que já avisa do resto (ex.: sem CR).
 - Erro fatal único: nenhum atributo e nenhum CR reconhecidos (`T20C5E.ErroTexto`: "isto não parece um bloco de
   estatísticas"). Bloco incompleto é aceito; o `lerAtor5e` já pede o que falta (ex.: sem CR).
 
@@ -89,8 +95,8 @@ Função pura, sem Foundry. Exporta `textoParaAtor5e(texto) → { ok, ator, avis
   combinação EN/PT × 2014/2024, mais casos de dano extra, recarga, usos, área, teste de resistência, PDF com
   linhas quebradas, tipos de dano em PT e erro fatal. Rodam em Node com `npm test`.
 - **Gabarito local:** `tests/fixtures/<nome>-5e.txt` (Otyugh, Dragão Azul, Arquimago), com o bloco copiado do
-  livro. O teste compara o `estado` e os tipos do relatório do texto com os do JSON de mesmo nome, e pula
-  sozinho se o `.txt` não existir. `.gitignore` ganha `tests/fixtures/*.txt` (direitos autorais, como os JSON).
+  livro. O teste compara o `estado` do texto com o do JSON de mesmo nome (sem as descrições: o JSON traz enriquecedores
+  como `[[/damage ...]]` e o texto não) e pula sozinho se o `.txt` ou o `.json` não existir. `.gitignore` ganha `tests/fixtures/*.txt` (direitos autorais, como os JSON).
 - **Entrega:** `module.json` e `package.json` em 0.5.0; README com a seção "Como usar" da v3 e o status
   atualizado (a lista "Versões planejadas" marca a v3 como feita); `docs/aprendizados-dano-e-conversao.md`
   ganha o que o parser de texto ensinar sobre diferenças entre texto e JSON.
