@@ -241,7 +241,8 @@ function lerArea(f) {
   return null;
 }
 
-const DADO = /\((\d*)d(\d+)(?:\s*([+-])\s*(\d+))?\)\s*(?:(?:de\s+)?dano\s+(?:de\s+)?)?([a-z]+)?/g;
+// O dado entre parênteses que NÃO é cura: "recupera 5 (1d10) Pontos de Vida" / "regains 4 (1d8) hit points" não é dano.
+const DADO = /\((\d*)d(\d+)(?:\s*([+-])\s*(\d+))?\)(?!\s*(?:temporary\s+|temporarios?\s+)?(?:pontos? de vida|hit points?|pv\b|hp\b))\s*(?:(?:de\s+)?dano\s+(?:de\s+)?)?([a-z]+)?/g;
 
 const CORTA_DANO = /\b(?:or|ou)\b|,?\s*\b(?:and|e)\s+(?:the|o|a)\s+(?:target|creature|alvo|criatura)\b|\b(?:must|deve)\b/;
 
@@ -249,7 +250,7 @@ const CORTA_DANO = /\b(?:or|ou)\b|,?\s*\b(?:and|e)\s+(?:the|o|a)\s+(?:target|cre
 // alternativa depois de "or"/"ou" (", or 17 (...) if used with two hands") e sem o dano condicional ("and the target must make
 // a saving throw, taking 9 (2d8) poison damage"), que é de uma salvaguarda, não do golpe.
 function lerDano(f) {
-  const inicio = f.search(/\(\d*d\d+/);
+  const inicio = f.search(new RegExp(DADO.source));
   if (inicio < 0) return [];
   const fim = f.slice(inicio).search(/\.(?:\s|$)/);
   const frase = f.slice(inicio, fim < 0 ? undefined : inicio + fim).split(CORTA_DANO)[0];

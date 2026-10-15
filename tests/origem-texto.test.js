@@ -456,3 +456,27 @@ test('rodapé das criaturas da comunidade do site não vira habilidade', () => {
   assert.deepEqual(r.estado.habilidades.map((h) => h.nome), ['Faro Aguçado']);
   assert.doesNotMatch(r.estado.habilidades[0].texto, /comunidade/);
 });
+
+// ---------- cura não é dano; salvaguarda é teste de resistência ----------
+
+test('"recupera 5 (1d10) Pontos de Vida" é cura, não dano: não vira rolagem de dano do poder', () => {
+  const e = ler([
+    'Sugador', 'Médio morto-vivo, neutro e mau', 'FOR 10 DES 10 CON 10 INT 10 SAB 10 CAR 10', 'Nível de Desafio 3 (700 XP)', 'Ações',
+    'Dreno. Se o sugador mantiver uma criatura Imobilizada, ele recupera 5 (1d10) Pontos de Vida.',
+    'Sorver. O alvo sofre 7 (2d6) de dano necrótico e o sugador recupera 3 (1d6) Pontos de Vida.',
+    'Cura Fraca. The creature regains 4 (1d8) hit points and gains 5 (1d10) temporary hit points.',
+  ].join('\n')).estado;
+  assert.equal(porNome(e.habilidades, 'Dreno').dano, undefined);
+  assert.deepEqual(porNome(e.habilidades, 'Sorver').dano, [{ formula: '2d6', tipo: 'trevas' }]);
+  assert.equal(porNome(e.habilidades, 'Cura Fraca').dano, undefined);
+});
+
+test('o texto dos poderes troca "Salvaguarda de Destreza" por "Teste de Reflexos" e a genérica por teste de resistência', () => {
+  const e = ler(SITE).estado;
+  assert.match(porNome(e.habilidades, 'Sopro de Lama').texto, /^\(Recarga \(movimento\)\) Teste de Reflexos: CD 13, cada criatura/);
+  assert.match(porNome(e.habilidades, 'Jato Gélido').texto, /Teste de Fortitude: CD 13/);
+  assert.match(porNome(e.habilidades, 'Resistência Lendária').texto, /falhar em um teste de resistência, ele pode/);
+  assert.match(porNome(e.habilidades, 'Resistência a Magia').texto, /vantagem em testes de resistência contra magias/);
+  assert.equal(porNome(e.habilidades, 'Resistência a Magia').oficial, 'resistenciaMagia'); // a detecção continua achando depois da troca
+  assert.doesNotMatch(JSON.stringify(e.habilidades), /alvaguarda/);
+});

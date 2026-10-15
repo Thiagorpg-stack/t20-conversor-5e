@@ -29,7 +29,7 @@ const salvamento = (habilidade, onSave, partes) => ({ a: { type: 'save', activat
 
 test('trocarTesteResistencia: "Constitution Saving Throw" vira Fortitude e os outros seguem a tabela', () => {
   assert.equal(trocarTesteResistencia('Constitution Saving Throw: DC 14'), 'Fortitude: DC 14');
-  assert.equal(trocarTesteResistencia('Strength Saving Throw'), 'Atletismo');
+  assert.equal(trocarTesteResistencia('Strength Saving Throw'), 'Fortitude'); // todo teste de resistência é Fortitude, Reflexos ou Vontade
   assert.equal(trocarTesteResistencia('Dexterity saving throw'), 'Reflexos');
   for (const nome of ['Wisdom', 'Charisma', 'Intelligence']) assert.equal(trocarTesteResistencia(`${nome} Saving Throw`), 'Vontade');
   assert.equal(trocarTesteResistencia('um teste qualquer'), 'um teste qualquer');

@@ -184,9 +184,9 @@ export function trocarDCporCD(texto) {
 
 // ---------- Teste de resistência ----------
 
-// Força → Atletismo, Destreza → Reflexos, Constituição → Fortitude, Sabedoria → Vontade;
-// Carisma e Inteligência também viram Vontade (padrão assumido, a mestre pode trocar).
-const PERICIA_DO_ATRIBUTO_5E = { str: 'atle', dex: 'refl', con: 'fort', wis: 'vont', cha: 'vont', int: 'vont' };
+// Todo teste de resistência do T20 é Fortitude, Reflexos ou Vontade: Força e Constituição → Fortitude, Destreza → Reflexos,
+// Sabedoria → Vontade; Carisma e Inteligência também viram Vontade (padrão assumido, a mestre pode trocar).
+const PERICIA_DO_ATRIBUTO_5E = { str: 'fort', dex: 'refl', con: 'fort', wis: 'vont', cha: 'vont', int: 'vont' };
 const ATRIBUTO_5E_POR_NOME = { strength: 'str', dexterity: 'dex', constitution: 'con', wisdom: 'wis', charisma: 'cha', intelligence: 'int' };
 export const NOME_DA_PERICIA = { atle: 'Atletismo', refl: 'Reflexos', fort: 'Fortitude', vont: 'Vontade' };
 
@@ -198,4 +198,28 @@ export const ehAtributoPadraoDeVontade = (atributo) => ['cha', 'int'].includes(S
 export function trocarTesteResistencia(texto) {
   return String(texto ?? '').replace(/\b(Strength|Dexterity|Constitution|Wisdom|Charisma|Intelligence)\s+Saving\s+Throw\b/gi,
     (_, nome) => NOME_DA_PERICIA[periciaDoAtributo5e(ATRIBUTO_5E_POR_NOME[nome.toLowerCase()])]);
+}
+
+// Textos em português do SRD: no Tormenta20 "salvaguarda" é teste de resistência, e o atributo vira a categoria do teste.
+// "Salvaguarda de Constituição: CD 14" → "Teste de Fortitude: CD 14"; "uma salvaguarda" → "um teste de resistência";
+// "salvaguardas de Inteligência, Sabedoria e Carisma" → "testes de Vontade"; "teste de resistência de Destreza" → "teste de Reflexos".
+const ATRIBUTO_5E_POR_NOME_PT = { 'força': 'str', destreza: 'dex', 'constituição': 'con', 'inteligência': 'int', sabedoria: 'wis', carisma: 'cha' };
+const ATRIBUTO_PT = 'Força|Destreza|Constituição|Inteligência|Sabedoria|Carisma';
+const LISTA_ATRIBUTO_PT = `(?:${ATRIBUTO_PT})(?:(?:, | e )(?:${ATRIBUTO_PT}))*`;
+const ARTIGO_MASCULINO = { uma: 'um', numa: 'num', na: 'no', nas: 'nos', da: 'do', das: 'dos', pela: 'pelo', pelas: 'pelos', 'às': 'aos', a: 'o', as: 'os' };
+const categoriasPt = (lista) => [...new Set(lista.split(/, | e /).map((nome) => NOME_DA_PERICIA[periciaDoAtributo5e(ATRIBUTO_5E_POR_NOME_PT[nome.toLowerCase()])]))];
+const juntar = (itens) => (itens.length > 1 ? `${itens.slice(0, -1).join(', ')} e ${itens.at(-1)}` : itens[0]);
+const maiuscula = (palavra) => palavra[0].toUpperCase() + palavra.slice(1);
+
+export function trocarSalvaguardaPt(texto) {
+  const salvaguarda = new RegExp(String.raw`(?:\b(uma|numa|nas?|das?|pelas?|às|as?)\s+)?\b(salvaguardas?)\b(?: de (${LISTA_ATRIBUTO_PT}))?`, 'gi');
+  const testeDeResistencia = new RegExp(String.raw`\b(testes? de resistência) de (${LISTA_ATRIBUTO_PT})`, 'gi');
+  return String(texto ?? '')
+    .replace(salvaguarda, (_, artigo, nome, lista) => {
+      const teste = `${/^S/.test(nome) ? 'T' : 't'}este${/s$/i.test(nome) ? 's' : ''} de ${lista ? juntar(categoriasPt(lista)) : 'resistência'}`;
+      if (!artigo) return teste;
+      const masculino = ARTIGO_MASCULINO[artigo.toLowerCase()];
+      return `${/^[A-ZÀ]/.test(artigo) ? maiuscula(masculino) : masculino} ${teste}`;
+    })
+    .replace(testeDeResistencia, (_, termo, lista) => `${/^T/.test(termo) ? 'T' : 't'}este${/^testes/i.test(termo) ? 's' : ''} de ${juntar(categoriasPt(lista))}`);
 }
