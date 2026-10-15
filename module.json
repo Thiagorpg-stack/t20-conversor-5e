@@ -2,7 +2,7 @@
   "id": "t20-conversor-5e",
   "title": "5e para T20",
   "description": "Converte criaturas de D&D 5e em ameaças de Tormenta20, usando as tabelas por ND e papel. / D&D 5e to Tormenta20 creature converter.",
-  "version": "0.4.2",
+  "version": "0.5.0",
   "authors": [
     {
       "name": "Thiago Cardim",
