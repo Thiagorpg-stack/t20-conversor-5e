@@ -3,6 +3,11 @@
     <button type="button" data-action="importar5e"><i class="fas fa-file-arrow-up"></i> {{localize "T20C5E.Importar"}}</button>
     <input type="file" accept=".json,application/json" data-importar hidden>
     <span class="conversor__nota">{{localize "T20C5E.ImportarDica"}}</span>
+    <details class="conversor__texto" {{#if e.texto5e}}open{{/if}}>
+      <summary>{{localize "T20C5E.ColarTexto"}}</summary>
+      <textarea name="texto5e" rows="8" placeholder="{{localize 'T20C5E.ColarTextoDica'}}">{{e.texto5e}}</textarea>
+      <button type="button" data-action="importarTexto"><i class="fas fa-paste"></i> {{localize "T20C5E.LerTexto"}}</button>
+    </details>
   </div>
   {{#if importacao.length}}
   <fieldset class="conversor__importacao">

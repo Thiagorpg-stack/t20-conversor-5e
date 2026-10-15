@@ -3,6 +3,7 @@
 import { obterApi } from './api-ajuste-nd.js';
 import { calcularND, linhaDoND, RITMOS } from './conversor/ritmo.js';
 import { lerAtor5e } from './conversor/origem-json.js';
+import { textoParaAtor5e } from './conversor/origem-texto.js';
 import { PASTA_IMAGENS, nomeDoArquivo, ehUrl, tokenDoCdn5e, urlsCandidatas } from './conversor/imagem.js';
 import { papelDoSistema, ndDeReferencia, CODIGOS_TAMANHO, CODIGOS_TIPO, CHAVES_DANO, NOME_DA_PERICIA } from './conversor/mapeamentos.js';
 import { criaturaDeFormulario, aplicarModoAtaques, poderDaTela, MODOS_ATAQUES, EXECUCOES, ATRIBUTOS } from './conversor/origem-cr.js';
@@ -70,6 +71,7 @@ export class DialogoConversor extends HandlebarsApplicationMixin(ApplicationV2) 
       enviarImagem: DialogoConversor.#enviarImagem,
       baixarImagem: DialogoConversor.#baixarImagem,
       importar5e: DialogoConversor.#importar5e,
+      importarTexto: DialogoConversor.#lerTexto,
       addPoder: DialogoConversor.#addPoder,
       removerPoder: DialogoConversor.#removerPoder,
     },
@@ -81,7 +83,7 @@ export class DialogoConversor extends HandlebarsApplicationMixin(ApplicationV2) 
     super(options);
     const nivelPadrao = Number(game.settings.get(ID_CONVERSOR, 'nivelGrupo')) || '';
     this.estado = {
-      nome: '', conceito: '', img: '', token: '', cr: '5', papel: 'solo', nivelGrupo: nivelPadrao,
+      nome: '', conceito: '', img: '', token: '', texto5e: '', cr: '5', papel: 'solo', nivelGrupo: nivelPadrao,
       ritmo: game.settings.get(ID_CONVERSOR, 'ritmo'),
       nd: null, ndManual: false, chefeFinal: false, conjurador: false, conjuracao: 'int',
       tamanho: 'med', tipo: 'mon', deslocamento: 9,
@@ -259,6 +261,7 @@ export class DialogoConversor extends HandlebarsApplicationMixin(ApplicationV2) 
     e.conceito = valor('conceito') ?? e.conceito;
     e.img = valor('img') ?? e.img;
     e.token = valor('token') ?? e.token;
+    e.texto5e = valor('texto5e') ?? e.texto5e;
     e.cr = valor('cr') ?? e.cr;
     e.papel = valor('papel') ?? e.papel;
     e.nivelGrupo = valor('nivelGrupo') ?? e.nivelGrupo;
@@ -388,11 +391,26 @@ export class DialogoConversor extends HandlebarsApplicationMixin(ApplicationV2) 
 
   // Lê o JSON de um ator de 5e e preenche o formulário; o que não é importado fica como está.
   async #importar(arquivo) {
+    await this.#aplicarOrigem(async () => ({ ator: JSON.parse(await arquivo.text()), avisos: [] }));
+  }
+
+  // Lê o bloco de estatísticas colado: o parser monta um ator dnd5e de mentira e o lerAtor5e faz o resto, como no JSON.
+  async #importarTexto() {
+    this.#lerFormulario();
+    const texto = this.estado.texto5e;
+    await this.#aplicarOrigem(async () => textoParaAtor5e(texto));
+  }
+
+  // Passos comuns às duas origens. `ler` devolve { ator, avisos } (ou { ok: false, erro }); o relatório começa pelos avisos.
+  async #aplicarOrigem(ler) {
     let resultado;
+    let avisos = [];
     try {
       const tabelas = await obterApi().obterTabelas();
-      const json = JSON.parse(await arquivo.text());
-      resultado = lerAtor5e(json, { pvSoloNoND: (nd) => linhaDoND(tabelas.solo, nd).PV });
+      const lido = await ler();
+      if (lido.ok === false) { ui.notifications.error(t(lido.erro)); return; }
+      avisos = lido.avisos;
+      resultado = lerAtor5e(lido.ator, { pvSoloNoND: (nd) => linhaDoND(tabelas.solo, nd).PV });
     } catch (erro) {
       console.error(`${ID_CONVERSOR} |`, erro);
       const msg = erro instanceof SyntaxError ? t('T20C5E.ErroImportarJson')
@@ -402,7 +420,7 @@ export class DialogoConversor extends HandlebarsApplicationMixin(ApplicationV2) 
     }
     if (!resultado.ok) { ui.notifications.error(t(resultado.erro)); return; }
     this.#lerFormulario();
-    const relatorio = [...resultado.relatorio];
+    const relatorio = [...avisos.map((texto) => ({ tipo: 'revisar', texto })), ...resultado.relatorio];
     const imagens = {}; // só o que abriu; senão fica a escolha que o mestre já tinha
     const candidatos = { // o token do arquivo pode ser de outro mundo; o do CDN do 5e.tools serve de reserva
       img: [resultado.imagens.img],
@@ -455,6 +473,10 @@ export class DialogoConversor extends HandlebarsApplicationMixin(ApplicationV2) 
 
   static #importar5e() {
     this.element.querySelector('[data-importar]').click();
+  }
+
+  static async #lerTexto() {
+    await this.#importarTexto();
   }
 
   static #enviarImagem(_ev, alvo) {
