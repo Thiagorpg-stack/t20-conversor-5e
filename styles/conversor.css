@@ -23,6 +23,8 @@
 
 .t20-conversor-5e .conversor__importar { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; }
 .t20-conversor-5e .conversor__importar button { width: auto; flex: 0 0 auto; }
+.t20-conversor-5e .conversor__texto { flex: 1 1 100%; display: flex; flex-direction: column; gap: 0.35rem; }
+.t20-conversor-5e .conversor__texto textarea { width: 100%; font-family: monospace; resize: vertical; }
 .t20-conversor-5e .conversor__importacao ul { margin: 0; padding-left: 1rem; font-size: 0.9em; }
 .t20-conversor-5e .conversor__rel--ok strong { color: #2e7d32; }
 .t20-conversor-5e .conversor__rel--revisar strong { color: #b8860b; }

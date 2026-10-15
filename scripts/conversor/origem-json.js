@@ -10,7 +10,10 @@ import { mediaFormula } from './dano.js';
 // chave do formulário → chave do dnd5e
 const ATRIBUTOS_5E = { for: 'str', des: 'dex', con: 'con', int: 'int', sab: 'wis', car: 'cha' };
 const FRACOES_CR = { 0.125: '1/8', 0.25: '1/4', 0.5: '1/2' };
-const QUANTIDADES = { one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9, ten: 10 };
+const QUANTIDADES = {
+  one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9, ten: 10,
+  um: 1, uma: 1, dois: 2, duas: 2, tres: 3, quatro: 4, cinco: 5, seis: 6, sete: 7, oito: 8, nove: 9, dez: 10,
+};
 const MOTIVOS_PAPEL = {
   lendaria: 'tem ações lendárias, resistência lendária ou ações de covil',
   conjuracao: 'conjura magias',
@@ -97,12 +100,21 @@ function danoExtraDe(item, modDe) {
   return { danoExtra, proporcaoExtra: principal + extra > 0 ? Math.round(extra / (principal + extra) * 1000) / 1000 : 0 };
 }
 
-// "one Bite attack and two Tentacle attacks → { Bite: 1, Tentacle: 2 }. Sem correspondência: null.
+// "one Bite attack and two Tentacle attacks" → { Bite: 1, Tentacle: 2 }; também "one with its bite and two with its tentacles"
+// (a redação da 2014) e, em português, "um ataque de Mordida e dois ataques de Tentáculo" / "um com sua mordida e dois com seus
+// tentáculos". Sem correspondência: null.
+const NUMERO_EN = 'one|two|three|four|five|six|seven|eight|nine|ten|\\d+';
+const NUMERO_PT = 'uma?|dois|duas|tr[eê]s|quatro|cinco|seis|sete|oito|nove|dez|\\d+';
 export function quantidadeNoMultiataque(texto, nome) {
-  const escapado = String(nome).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const m = new RegExp(`\\b(one|two|three|four|five|six|seven|eight|nine|ten|\\d+)\\s+(?:(?:melee|ranged|weapon)\\s+)?${escapado}s?\\b`, 'i').exec(texto);
+  const n = String(nome).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const m = [
+    `\\b(${NUMERO_EN})\\s+(?:(?:melee|ranged|weapon)\\s+)?${n}s?\\b`,
+    `\\b(${NUMERO_EN})\\s+with\\s+(?:its|his|her|their)\\s+${n}s?\\b`,
+    `\\b(${NUMERO_PT})\\s+ataques?\\s+(?:de|com)\\s+(?:o\\s+|a\\s+)?${n}s?\\b`,
+    `\\b(${NUMERO_PT})\\s+com\\s+(?:sua|suas|seu|seus)\\s+${n}s?\\b`,
+  ].map((re) => new RegExp(re, 'i').exec(texto)).find(Boolean);
   if (!m) return null;
-  return QUANTIDADES[m[1].toLowerCase()] ?? Number(m[1]);
+  return QUANTIDADES[m[1].toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')] ?? Number(m[1]);
 }
 
 // dnd5e 5.x grava "standard:common"; antes era só "common".

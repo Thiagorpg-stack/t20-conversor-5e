@@ -288,9 +288,26 @@ Módulos sem dependência do Foundry (testáveis em Node), em `scripts/conversor
 | `ritmo.js` | Calibração CR para ND (fórmula de Q, ritmos, XP por CR) |
 | `papel.js` | Heurística do papel sugerido |
 | `origem-json.js` | Leitura de ator do dnd5e (ataques, multiataque, sentidos, idiomas, resistências, condições, poderes, imagem) e limpeza de texto |
+| `origem-texto.js` | Bloco de estatísticas colado como texto (inglês e português, layouts 2014 e 2024) para um ator dnd5e de mentira, que o `origem-json.js` converte |
 | `origem-cr.js` | Validação do formulário e modos de quantidade de ataques |
 | `criar-ator.js`, `modelo-ator.js` | Montagem do ator, arma e poder do T20 (o modelo foi portado do `foundryTemplate.js` do próprio Crias de Megalokk) |
 | `imagem.js` | Nome seguro de arquivo, URL candidata do CDN do 5e.tools |
 
 O que depende do Foundry e **não** serve: `dialogo-conversor.js`, `main.js`, `api-ajuste-nd.js`.
 Os testes (`tests/`) documentam o comportamento esperado de cada regra acima.
+
+## 13. Texto colado (v3)
+
+O parser (`origem-texto.js`) não converte nada: monta um ator dnd5e de mentira e o `lerAtor5e` faz o resto. O que ele precisa produzir é o que o `lerAtor5e` lê: `activities` do item (`attack` com `attack.type.value`, `save` com `save.ability` como lista e `damage.onSave`, `utility` com `target.template`), `damage.parts` no formato do dnd5e 4+ (`number`, `denomination`, `bonus` em texto, `types`), `uses`/`recovery`, `system.activation.type`, `identifier` (`multiattack`, `spellcasting`), `resources.legact/legres/lair`, `traits.dr/di/dv/ci` (com `bypasses: ['mgc']`), `languages.communication.telepathy` e `senses.ranges`.
+
+Diferenças entre texto e JSON, por escolha:
+
+- As descrições ficam em texto puro. Para o `lerDanoPoder` continuar achando "efeito" (condição ou área) sem mexer na v2, as palavras de condição são marcadas como `&Reference[condition=...]` na descrição, que o `limparTexto5e` já desfaz.
+- Perícias e testes de resistência proficientes só viram uma marca, para o relatório dizer "não importado".
+- Sentidos em metros viram pés (÷ 0,3), porque o `lerAtor5e` escreve "pés" nos sentidos sem equivalente.
+- O PV do bloco alimenta só a sugestão de papel (Lacaio), como no JSON.
+- O texto do poder em português continua "teste de resistência de Destreza": só o inglês é trocado por "Reflexos". O campo de resistência do poder sai certo nos dois idiomas.
+
+Heurísticas frágeis, avisadas no relatório quando duvidam: o fim do nome de uma habilidade (o texto colado perde o itálico; vale o primeiro ponto nos primeiros 60 caracteres, até 6 palavras, sem ":" nem dado), linha que começa em minúscula como continuação da anterior e linha sem nome como continuação da entrada da mesma seção.
+
+Não verificado: blocos reais de PDF com colunas misturadas; os blocos de teste versionados são inventados, e o gabarito contra os livros roda só localmente (`tests/origem-texto-gabarito.test.js`, com `tests/fixtures/*.txt`).

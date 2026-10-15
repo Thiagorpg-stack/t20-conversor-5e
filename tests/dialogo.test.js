@@ -214,3 +214,15 @@ test('prévia sem poderesPrevia (Ajustar ND antigo) não quebra', async () => {
   assert.deepEqual(ctx.previa.poderes, []);
   assert.equal(ctx.poderes[0].depois, null);
 });
+
+test('texto colado: o change do campo guarda o texto sem redesenhar o diálogo', async () => {
+  const d = new DialogoConversor();
+  let desenhos = 0;
+  d.render = async () => { desenhos += 1; };
+  const campo = { name: 'texto5e', value: 'bloco colado', dataset: {}, addEventListener(_, f) { this.aoMudar = f; } };
+  d.element = { querySelectorAll: (seletor) => (seletor.startsWith('input') ? [campo] : []), querySelector: () => null };
+  d._onRender();
+  await campo.aoMudar({ target: campo });
+  assert.equal(d.estado.texto5e, 'bloco colado');
+  assert.equal(desenhos, 0); // redesenhar no blur engole o primeiro clique em "Ler texto"
+});
