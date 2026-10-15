@@ -31,11 +31,11 @@ const TIPOS = {
   construct: 'construct', constructo: 'construct', construto: 'construct', dragon: 'dragon', dragao: 'dragon',
   elemental: 'elemental', fey: 'fey', fada: 'fey', fiend: 'fiend', infero: 'fiend', giant: 'giant', gigante: 'giant',
   humanoid: 'humanoid', humanoide: 'humanoid', monstrosity: 'monstrosity', monstruosidade: 'monstrosity',
-  ooze: 'ooze', limo: 'ooze', plant: 'plant', planta: 'plant', undead: 'undead', 'morto-vivo': 'undead',
+  corruptor: 'fiend', ooze: 'ooze', limo: 'ooze', plant: 'plant', planta: 'plant', undead: 'undead', 'morto-vivo': 'undead',
 };
 const DANO = {
-  bludgeoning: 'bludgeoning', contundente: 'bludgeoning', piercing: 'piercing', perfurante: 'piercing',
-  slashing: 'slashing', cortante: 'slashing', fire: 'fire', fogo: 'fire', cold: 'cold', frio: 'cold', acid: 'acid', acido: 'acid',
+  bludgeoning: 'bludgeoning', contundente: 'bludgeoning', concussao: 'bludgeoning', piercing: 'piercing', perfurante: 'piercing',
+  slashing: 'slashing', cortante: 'slashing', fire: 'fire', fogo: 'fire', igneo: 'fire', cold: 'cold', frio: 'cold', acid: 'acid', acido: 'acid',
   lightning: 'lightning', eletrico: 'lightning', eletricidade: 'lightning', necrotic: 'necrotic', necrotico: 'necrotic',
   radiant: 'radiant', radiante: 'radiant', psychic: 'psychic', psiquico: 'psychic', force: 'force', energia: 'force',
   energetico: 'force', forca: 'force', thunder: 'thunder', trovejante: 'thunder', trovao: 'thunder',
@@ -56,7 +56,7 @@ const IDIOMAS = {
   gigante: 'giant', gnoll: 'gnoll', ignan: 'ignan', infernal: 'infernal', orc: 'orc', terran: 'terran',
 };
 const SENTIDOS = {
-  darkvision: 'darkvision', 'visao no escuro': 'darkvision', blindsight: 'blindsight', 'visao cega': 'blindsight',
+  darkvision: 'darkvision', 'visao no escuro': 'darkvision', blindsight: 'blindsight', 'visao cega': 'blindsight', 'percepcao as cegas': 'blindsight',
   tremorsense: 'tremorsense', 'sentido sismico': 'tremorsense', truesight: 'truesight', 'visao verdadeira': 'truesight',
 };
 const MODOS = {
@@ -152,12 +152,14 @@ function lerDeslocamento(valor) {
   return { ...movimento, units: metros ? 'm' : 'ft' };
 }
 
-function lerSentidos(valor) {
+function lerSentidos(valor, avisos) {
   const ranges = {};
-  for (const parte of semAcento(valor).split(/[,;]/)) {
+  for (const original of valor.split(/[,;]/).filter((p) => p.trim())) {
+    const parte = semAcento(original);
     const m = /^\s*([a-z ]+?)\s+(\d+(?:[.,]\d+)?)\s*(ft|feet|pes?|metros?|m)(?![a-z])/.exec(parte);
     const chave = m && SENTIDOS[m[1].trim()];
     if (chave) ranges[chave] = ehMetro(m[3]) ? Math.round(numero(m[2]) / 0.3) : numero(m[2]); // o lerAtor5e escreve "pés"
+    else if (!/percepcao passiva|passive perception/.test(parte)) avisos.push(`Sentido não reconhecido: ${original.trim()}.`);
   }
   return { ranges, special: '' };
 }
@@ -189,12 +191,17 @@ function lerLista(valor) {
 
 // ---------- entradas (habilidades, ações) ----------
 
-// "Nome. texto": o nome tem até 6 palavras (sem contar parênteses), sem ":" e sem dado de dano, e começa em maiúscula.
+const NAO_NOME = /\b(?:damage|saving throw|dano|teste de resistencia)\b/;
+const COMECO_DE_FRASE = /^(?:the|a|an|if|when|each|until|se|quando|cada)$/;
+
+// "Nome. texto": o nome tem até 6 palavras (sem contar parênteses), sem ":" e sem dado de dano, começa em maiúscula e é
+// seguido de texto na mesma linha. Pedaço de frase quebrada ("Fire damage.", "The target is grappled (escape DC 13).") não é nome.
 function separarNome(linha) {
   const m = /^([A-ZÀ-Ý][^.:]{0,59})\.(?:\s+([\s\S]*))?$/.exec(linha);
-  if (!m || /\dd\d/.test(m[1])) return null;
-  if (m[1].replace(/\([^)]*\)/g, '').trim().split(/\s+/).length > 6) return null;
-  return { nome: m[1].trim(), texto: m[2] ?? '' };
+  if (!m?.[2] || /\dd\d/.test(m[1]) || NAO_NOME.test(semAcento(m[1]))) return null;
+  const palavras = m[1].replace(/\([^)]*\)/g, '').trim().split(/\s+/);
+  if (palavras.length > 6 || (palavras.length >= 4 && COMECO_DE_FRASE.test(semAcento(palavras[0])))) return null;
+  return { nome: m[1].trim(), texto: m[2] };
 }
 
 const REFERENCIAS = new RegExp(String.raw`\b(${[
@@ -219,6 +226,8 @@ function lerArea(f) {
     const largura = /(\d+)[- ]f(?:ee|oo)t wide/.exec(f);
     return { type: FORMAS[m[2]], size: Number(m[1]), ...(m[2] === 'line' && { width: largura ? Number(largura[1]) : 5 }), units: 'ft' };
   }
+  m = /\bline (\d+) feet long(?: and (\d+) feet wide)?/.exec(f);
+  if (m) return { type: 'line', size: Number(m[1]), width: m[2] ? Number(m[2]) : 5, units: 'ft' };
   m = /(cone|esfera|cubo|cilindro|emanacao|linha) de (\d+(?:,\d+)?) ?(?:m|metros?)(?![a-z])/.exec(f);
   if (m) {
     const largura = /(\d+(?:,\d+)?) ?(?:m|metros?) de largura/.exec(f);
@@ -229,13 +238,16 @@ function lerArea(f) {
 
 const DADO = /\((\d*)d(\d+)(?:\s*([+-])\s*(\d+))?\)\s*(?:(?:de\s+)?dano\s+(?:de\s+)?)?([a-z]+)?/g;
 
+const CORTA_DANO = /\b(?:or|ou)\b|,?\s*\b(?:and|e)\s+(?:the|o|a)\s+(?:target|creature|alvo|criatura)\b|\b(?:must|deve)\b/;
+
 // Partes de dano da frase do primeiro dado ("Hit: 16 (2d8 + 7) slashing damage plus 5 (1d10) lightning damage"), sem a
-// alternativa depois de "or"/"ou" (", or 17 (...) if used with two hands").
+// alternativa depois de "or"/"ou" (", or 17 (...) if used with two hands") e sem o dano condicional ("and the target must make
+// a saving throw, taking 9 (2d8) poison damage"), que é de uma salvaguarda, não do golpe.
 function lerDano(f) {
   const inicio = f.search(/\(\d*d\d+/);
   if (inicio < 0) return [];
-  const fim = f.indexOf('. ', inicio);
-  const frase = f.slice(inicio, fim < 0 ? undefined : fim).split(/\b(?:or|ou)\b/)[0];
+  const fim = f.slice(inicio).search(/\.(?:\s|$)/);
+  const frase = f.slice(inicio, fim < 0 ? undefined : inicio + fim).split(CORTA_DANO)[0];
   return [...frase.matchAll(DADO)].map(([, n, d, sinal, bonus, tipo]) => ({
     number: Number(n || 1), denomination: Number(d), bonus: bonus ? `${sinal === '-' ? '-' : ''}${bonus}` : '', types: DANO[tipo] ? [DANO[tipo]] : [],
   }));
@@ -256,14 +268,16 @@ function montarItem({ nome: bruto, texto, secao }, ator) {
   const f = semAcento(texto);
   const usos = /\(\s*(\d+)\s*\/\s*(dia|day|short rest|long rest|descanso curto|descanso longo)/.exec(fNome);
   const recarga = /\(\s*(?:recharge|recarga)\s+(\d)/.exec(fNome);
+  const descanso = /\(\s*(?:recharges? after (?:a|an) |recarga apos (?:um |uma )?descanso )(short|long|curto|longo)/.exec(fNome);
   const nome = bruto.replace(/\s*\(\s*(?:\d+\s*\/|recharge|recarga)[^)]*\)/i, '').trim();
   const item = { type: 'feat', name: nome, system: { description: { value: texto.replace(REFERENCIAS, '&Reference[condition=$1]') } } };
   if (ATIVACAO[secao]) item.system.activation = { type: ATIVACAO[secao] };
   if (usos) item.system.uses = { max: usos[1], recovery: [{ period: PERIODOS[usos[2]] }] };
   if (recarga) item.system.uses = { max: '', recovery: [{ period: 'recharge', formula: recarga[1] }] };
+  if (descanso) item.system.uses = { max: '1', recovery: [{ period: /^(?:short|curto)$/.test(descanso[1]) ? 'sr' : 'lr' }] };
   if (/^(?:multiattack|multiataque|ataques? multiplos?)$/.test(semAcento(nome))) item.system.identifier = 'multiattack';
   if (/^(?:spellcasting|conjuracao)$/.test(semAcento(nome))) item.system.identifier = 'spellcasting';
-  if (/^(?:innate )?spellcasting$|^conjuracao(?: inata)?$/.test(semAcento(nome))) {
+  if (/^(?:innate )?spellcasting(?: \(.*\))?$|^conjuracao(?: inata)?(?: \(.*\))?$/.test(semAcento(nome))) {
     const atributo = (f.match(new RegExp(`\\b(?:intelligence|wisdom|charisma|inteligencia|sabedoria|carisma)\\b`)) ?? [])[0];
     if (atributo) ator.system.attributes.spellcasting = ATRIBUTO_POR_NOME[atributo];
   }
@@ -280,7 +294,7 @@ function montarItem({ nome: bruto, texto, secao }, ator) {
   } else if (salvaguarda) {
     Object.assign(atividade, {
       type: 'save', save: { ability: [ATRIBUTO_POR_NOME[salvaguarda[1]]] },
-      damage: { onSave: /half (?:as much )?damage|metade do dano/.test(f) ? 'half' : 'none', parts: partes },
+      damage: { onSave: /half (?:as much )?damage|metade d(?:o|esse) dano/.test(f) ? 'half' : 'none', parts: partes },
     });
   } else if (partes.length) {
     Object.assign(atividade, { type: 'utility', damage: { parts: partes } });
@@ -332,7 +346,7 @@ export function textoParaAtor5e(bruto) {
   const pv = valorDe(cabecalho, ROTULOS.pv)?.match(/^\d+/)?.[0];
   if (pv) s.attributes.hp = { max: Number(pv) }; // só alimenta a sugestão de papel; o PV final vem da tabela
   const sentidos = valorDe(cabecalho, ROTULOS.sentidos);
-  if (sentidos) s.attributes.senses = lerSentidos(sentidos);
+  if (sentidos) s.attributes.senses = lerSentidos(sentidos, avisos);
   const idiomas = valorDe(cabecalho, ROTULOS.idiomas);
   if (idiomas) s.traits.languages = lerIdiomas(idiomas);
   if (valorDe(cabecalho, ROTULOS.pericias)) s.skills = { lidas: { value: 1 } }; // só para o relatório "perícias treinadas"

@@ -450,6 +450,8 @@ export class DialogoConversor extends HandlebarsApplicationMixin(ApplicationV2) 
 
   async #aoMudar(ev) {
     const nome = ev.target.name;
+    // O texto colado não muda nenhum cálculo: redesenhar no blur trocaria o botão "Ler texto" antes do clique terminar.
+    if (nome === 'texto5e') { this.estado.texto5e = ev.target.value; return; }
     this.#lerFormulario();
     if (ev.target.dataset.campo === 'qtd') this.estado.modoAtaques = 'manual'; // editar a quantidade vale como escolha manual
     if (nome === 'nd') this.estado.ndManual = true;

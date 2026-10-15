@@ -34,6 +34,15 @@ test('multiataque em português: "dois ataques de Mordida" e "um ataque com a Ga
   assert.equal(quantidadeNoMultiataque(texto, 'Chifre'), null);
 });
 
+test('multiataque da 2014: "one with its bite and two with its tentacles" e o português "um com sua mordida"', () => {
+  const en = 'The otyugh makes three attacks: one with its bite and two with its tentacles.';
+  assert.equal(quantidadeNoMultiataque(en, 'Bite'), 1);
+  assert.equal(quantidadeNoMultiataque(en, 'Tentacle'), 2);
+  const pt = 'O otyugh realiza três ataques: um com sua mordida e dois com seus tentáculos.';
+  assert.equal(quantidadeNoMultiataque(pt, 'Mordida'), 1);
+  assert.equal(quantidadeNoMultiataque(pt, 'Tentáculo'), 2);
+});
+
 test('rejeita o que não é NPC do dnd5e', () => {
   assert.deepEqual(lerAtor5e({ type: 'character', system: {} }), { ok: false, erro: 'T20C5E.ErroImportarNpc' });
   assert.equal(lerAtor5e(null).ok, false);

@@ -31,7 +31,7 @@ O PV do bloco é lido só para a sugestão de papel (Lacaio), como na v2; o PV f
 - Em `templates/dialogo-conversor.hbs`, ao lado de "Importar JSON": um `<details>` com um `<textarea>`
   (`name="texto5e"`) e o botão "Ler texto" (`data-action="importarTexto"`). Textos em `lang/pt-BR.json`.
 - `scripts/dialogo-conversor.js`: o trecho de `#importar` depois do `lerAtor5e` (relatório, imagens, `estado`,
-  `render`) vira `#aplicarResultado(resultado)`, usado pelas duas origens. O texto devolve `imagens` vazio, e o
+  `render`) vira `#aplicarOrigem(ler)` (que também lê o ator), usado pelas duas origens. O texto devolve `imagens` vazio, e o
   fluxo atual já registra no relatório que imagem e token não vieram.
 - Fluxo do texto: `obterTabelas()` → `textoParaAtor5e(texto)` → `lerAtor5e(ator, { pvSoloNoND })` →
   avisos do parser antepostos ao relatório → `#aplicarResultado`. Erro vira `ui.notifications.error` e o

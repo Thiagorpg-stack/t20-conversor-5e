@@ -284,3 +284,77 @@ test('bordas: deslocamento e sentidos em metros com vírgula; sentido sem equiva
   assert.deepEqual(r.estado.deslocamentosExtra, { burrow: 9 });
   assert.match(r.relatorio.find((l) => /Sentidos sem equivalente/.test(l.texto)).texto, /tremorsense 60 pés/);
 });
+
+// ---------- achados da revisão final ----------
+
+test('dano condicional da mordida (salvaguarda depois do golpe) não vira dano extra fixo; parágrafo seguinte também não', () => {
+  const aranha = ler([
+    'Aranha', 'Large beast, unaligned', 'STR 14 DEX 16 CON 12 INT 2 WIS 11 CHA 4', 'Challenge 1 (200 XP)', 'ACTIONS',
+    'Bite. Melee Weapon Attack: +5 to hit, reach 5 ft., one creature. Hit: 7 (1d8 + 3) piercing damage, and the target must make a DC 11 Constitution saving throw, taking 9 (2d8) poison damage on a failed save, or half as much damage on a successful one.',
+  ].join('\n')).estado;
+  assert.deepEqual(aranha.ataques[0].danoExtra, []);
+  const aranhaPt = ler([
+    'Aranha', 'Grande fera, sem tendência', 'FOR 14 DES 16 CON 12 INT 2 SAB 11 CAR 4', 'Desafio 1 (200 XP)', 'AÇÕES',
+    'Mordida. Ataque Corpo a Corpo com Arma: +5 para atingir, alcance 1,5 m, uma criatura. Acerto: 7 (1d8 + 3) de dano perfurante, e o alvo deve realizar um teste de resistência de Constituição CD 11, sofrendo 9 (2d8) de dano de veneno se falhar.',
+  ].join('\n')).estado;
+  assert.deepEqual(aranhaPt.ataques[0].danoExtra, []);
+  const fogo = ler([
+    'Brasa', 'Medium elemental, neutral', 'STR 10 DEX 12 CON 10 INT 4 WIS 10 CHA 4', 'Challenge 1 (200 XP)', 'ACTIONS',
+    'Touch. Melee Weapon Attack: +4 to hit, reach 5 ft., one target. Hit: 5 (1d6 + 2) fire damage.',
+    'If the target is a creature wearing flammable armor, it takes 10 (3d6) fire damage at the start of each of its turns.',
+  ].join('\n')).estado;
+  assert.deepEqual(fogo.ataques[0].danoExtra, []);
+});
+
+test('PDF: linha que continua depois de quebra e começa em maiúscula não vira habilidade nem leva o dano ou o teste', () => {
+  const e = ler([
+    'Dragão', 'Large dragon, lawful evil', 'STR 20 DEX 10 CON 18 INT 12 WIS 12 CHA 14', 'Challenge 8 (3,900 XP)', 'ACTIONS',
+    'Rend. Melee Weapon Attack: +9 to hit, reach 10 ft., one target. Hit: 13 (2d8 + 4) Slashing damage plus 7 (2d6)',
+    'Fire damage.',
+    'Gaze. The target must succeed on a DC 13',
+    'Wisdom saving throw. On a failure, it takes 10 (3d6) psychic damage.',
+    'Tentacle. Melee Weapon Attack: +7 to hit, reach 10 ft., one target. Hit: 10 (2d6 + 3) bludgeoning damage.',
+    'The target is grappled (escape DC 13). Until this grapple ends, the target takes 7 (2d6) acid damage at the start of each of its turns.',
+  ].join('\n')).estado;
+  assert.deepEqual(e.ataques.map((a) => a.nome), ['Rend', 'Tentacle']);
+  assert.deepEqual(e.ataques[0].danoExtra, [{ formula: '2d6', tipo: 'fogo' }]);
+  assert.deepEqual(e.ataques[1].danoExtra, []);
+  assert.deepEqual(e.habilidades.map((h) => h.nome), ['Gaze']);
+  assert.deepEqual(e.habilidades[0].dano, [{ formula: '3d6', tipo: 'psiquico' }]);
+  assert.deepEqual(e.habilidades[0].resistencia, { pericia: 'vont', metade: false });
+});
+
+test('vocabulário dos livros em português: corruptor, concussão, ígneo, percepção às cegas, "metade desse dano"', () => {
+  const r = ler([
+    'Diabrete', 'Miúdo corruptor, leal e mau', 'FOR 6 DES 17 CON 13 INT 11 SAB 12 CAR 14',
+    'Resistência a Dano frio; concussão, perfurante e cortante de ataques não mágicos',
+    'Sentidos percepção às cegas 9 m, sentido estranho 9 m, Percepção passiva 11',
+    'Desafio 1 (200 XP)', 'AÇÕES',
+    'Ferrão. Ataque Corpo a Corpo com Arma: +5 para atingir, alcance 1,5 m, um alvo. Acerto: 5 (1d4 + 3) de dano perfurante mais 10 (3d6) de dano ígneo.',
+    'Chama. O diabrete deve realizar um teste de resistência de Destreza CD 12, sofrendo 10 (3d6) de dano ígneo se falhar, ou metade desse dano se obtiver sucesso.',
+  ].join('\n'));
+  const e = r.estado;
+  assert.deepEqual([e.tamanho, e.tipo], ['min', 'esp']);
+  assert.deepEqual(e.resistenciasDano.reducao, ['frio', 'impacto', 'perfuracao', 'corte']);
+  assert.deepEqual(e.sentidos.value, ['cegas']);
+  assert.match(r.avisos.join('|'), /Sentido não reconhecido: sentido estranho 9 m/);
+  assert.doesNotMatch(r.avisos.join('|'), /Percepção passiva/);
+  assert.deepEqual(e.ataques[0].danoExtra, [{ formula: '3d6', tipo: 'fogo' }]);
+  assert.deepEqual(porNome(e.habilidades, 'Chama').resistencia, { pericia: 'refl', metade: true });
+});
+
+test('"Recharges after a Short or Long Rest" vira 1/descanso curto; "Innate Spellcasting (Psionics)" é conjuração; "line 30 feet long"', () => {
+  const r = ler([
+    'Devorador', 'Medium aberration, lawful evil', 'STR 11 DEX 12 CON 12 INT 19 WIS 17 CHA 17', 'Challenge 7 (2,900 XP)',
+    'Innate Spellcasting (Psionics). The mind flayer\u2019s innate spellcasting ability is Intelligence (spell save DC 15). It can innately cast detect thoughts.',
+    'ACTIONS',
+    'Mind Blast (Recharges after a Short or Long Rest). The mind flayer magically emits psychic energy in a line 30 feet long and 5 feet wide. Each creature in that line must make a DC 15 Intelligence saving throw, taking 22 (4d8 + 4) psychic damage on a failed save.',
+  ].join('\n'));
+  const e = r.estado;
+  assert.equal(e.conjurador, true);
+  assert.equal(e.conjuracao, 'int');
+  const rajada = porNome(e.habilidades, 'Mind Blast');
+  assert.equal(rajada.usos, 1);
+  assert.match(rajada.texto, /^\(1\/descanso curto\)/);
+  assert.equal(rajada.area, 'linha 9m x 1,5m');
+});
