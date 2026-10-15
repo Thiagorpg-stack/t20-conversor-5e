@@ -240,26 +240,43 @@ test('botão "Colar texto": alterna o campo de texto sem perder o que já foi di
   assert.deepEqual([d.estado.textoAberto, d.estado.texto5e, desenhos], [false, 'bloco colado', 2]); // fechar não apaga o texto
 });
 
-test('"Calibrar pelo nível do grupo": alterna o bloco recolhido sem perder o que foi digitado', async () => {
+test('"Calibrar pelo nível do grupo": alterna o bloco, mesmo com o nível preenchido, sem perder o que foi digitado', async () => {
   const d = new DialogoConversor();
   let desenhos = 0;
   d.render = async () => { desenhos += 1; };
   d.element = { querySelectorAll: () => [], querySelector: (s) => (s === '[name=nivelGrupo]' ? { value: '7' } : null) };
+  d.estado.calibrarAberto = false;
   const alternar = DialogoConversor.DEFAULT_OPTIONS.actions.alternarCalibragem;
-  assert.equal(d.estado.calibrarAberto, false);
   await alternar.call(d);
   assert.deepEqual([d.estado.calibrarAberto, d.estado.nivelGrupo, desenhos], [true, '7', 1]);
+  assert.equal((await d._prepareContext()).calibrarVisivel, true);
   await alternar.call(d);
-  assert.deepEqual([d.estado.calibrarAberto, d.estado.nivelGrupo, desenhos], [false, '7', 2]); // fechar não apaga o nível
+  assert.deepEqual([d.estado.calibrarAberto, d.estado.nivelGrupo, desenhos], [false, '7', 2]);
+  assert.equal((await d._prepareContext()).calibrarVisivel, false); // fechar esconde, mesmo com nível: o botão nunca fica sem efeito
 });
 
-test('o nível do grupo digitado abre o bloco de calibragem ao importar ou reabrir o diálogo', async () => {
+test('a calibragem já abre se as configurações têm um nível padrão, e fecha se não têm', () => {
+  const antes = game.settings.get;
+  assert.equal(new DialogoConversor().estado.calibrarAberto, true); // o Foundry simulado devolve nível 10
+  game.settings.get = (_m, chave) => ({ nivelGrupo: 0, ritmo: 't20' }[chave]);
+  try { assert.equal(new DialogoConversor().estado.calibrarAberto, false); } finally { game.settings.get = antes; }
+});
+
+test('sem o nome da criatura o ND já é calculado e mostrado (referência, calibrado e o campo ND)', async () => {
   const d = new DialogoConversor();
-  d.estado.nivelGrupo = 5;
-  assert.equal((await d._prepareContext()).calibrarVisivel, true); // com nível preenchido o bloco nunca fica escondido
-  const vazio = new DialogoConversor();
-  vazio.estado.nivelGrupo = '';
-  assert.equal((await vazio._prepareContext()).calibrarVisivel, false);
+  Object.assign(d.estado, { nome: '', cr: '5', nivelGrupo: 3, papel: 'solo', ritmo: 't20' });
+  d.tocado = true;
+  const ctx = await d._prepareContext();
+  assert.equal(ctx.erros.length, 1); // só falta o nome
+  assert.equal(ctx.referencia, '5');
+  assert.ok(ctx.calibrado, 'ND calibrado calculado');
+  assert.equal(ctx.nds.filter((n) => n.selecionado).length, 1);
+  d.estado.cr = 'xx'; // CR inválido: não há ND para mostrar
+  assert.equal((await d._prepareContext()).referencia, undefined);
+});
+
+test('o diálogo preserva a rolagem da janela ao se redesenhar', () => {
+  assert.deepEqual(DialogoConversor.PARTS.corpo.scrollable, ['.conversor']);
 });
 
 // Soltar poder ou magia na janela: o Foundry entrega { type: 'Item', uuid }, que o diálogo resolve com fromUuid.

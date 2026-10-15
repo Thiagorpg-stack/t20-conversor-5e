@@ -83,7 +83,7 @@
       <label>{{localize "T20C5E.NDFinal"}}
         <select name="nd">{{#each nds}}<option value="{{valor}}" {{#if selecionado}}selected{{/if}}>{{valor}}</option>{{/each}}</select>
       </label>
-      <button type="button" data-action="alternarCalibragem"><i class="fas fa-sliders"></i> {{localize "T20C5E.Calibrar"}}</button>
+      <button type="button" data-action="alternarCalibragem" aria-expanded="{{#if calibrarVisivel}}true{{else}}false{{/if}}"><i class="fas fa-chevron-{{#if calibrarVisivel}}down{{else}}right{{/if}}"></i> {{localize "T20C5E.Calibrar"}}</button>
     </div>
     {{#if calibrarVisivel}}
     <p class="conversor__nota">{{localize "T20C5E.CalibrarDica"}}</p>

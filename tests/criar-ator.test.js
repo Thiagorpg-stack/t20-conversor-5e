@@ -242,3 +242,12 @@ test('itens arrastados: entram na ficha depois das armas e poderes, com id novo,
   assert.equal(new Set(dados.items.map((i) => i._id)).size, dados.items.length);
   assert.deepEqual(criaturaDeFormulario(formulario()).criatura.itensExtras, []);
 });
+
+test('criaturaDeFormulario: sem o nome, devolve os parâmetros do ND; com CR ou nível inválido, não', () => {
+  const sem = criaturaDeFormulario(formulario({ nome: '', cr: '5', nivelGrupo: '3', ritmo: 't20' }));
+  assert.equal(sem.ok, false);
+  assert.deepEqual(sem.parametrosND, { papel: 'solo', cr: 5, nivelGrupo: 3, ritmo: 't20' });
+  assert.equal(criaturaDeFormulario(formulario({ nome: '', cr: 'xx' })).parametrosND, null);
+  assert.equal(criaturaDeFormulario(formulario({ nivelGrupo: '99' })).parametrosND, null);
+  assert.equal(criaturaDeFormulario(formulario()).ok, true);
+});

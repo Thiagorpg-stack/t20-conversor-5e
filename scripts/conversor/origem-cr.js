@@ -120,7 +120,10 @@ export function criaturaDeFormulario(f) {
     })
     .filter((h) => h.nome);
 
-  if (erros.length) return { ok: false, erros };
+  // O ND só depende de CR, papel, ritmo e nível: com só o nome (ou outro campo) faltando, a tela ainda mostra o ND.
+  const parametrosND = ['cr', 'papel', 'ritmo', 'nivelGrupo'].some((c) => erros.includes(c))
+    ? null : { papel: f.papel, cr: crNumero, nivelGrupo, ritmo: f.ritmo };
+  if (erros.length) return { ok: false, erros, parametrosND };
   return {
     ok: true,
     erros: [],

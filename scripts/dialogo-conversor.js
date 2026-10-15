@@ -81,13 +81,14 @@ export class DialogoConversor extends HandlebarsApplicationMixin(ApplicationV2) 
     },
   };
 
-  static PARTS = { corpo: { template: `modules/${ID_CONVERSOR}/templates/dialogo-conversor.hbs` } };
+  // `scrollable`: o Foundry guarda e devolve a rolagem da janela quando ela se redesenha (senão voltaria ao topo a cada clique).
+  static PARTS = { corpo: { template: `modules/${ID_CONVERSOR}/templates/dialogo-conversor.hbs`, scrollable: ['.conversor'] } };
 
   constructor(options = {}) {
     super(options);
     const nivelPadrao = Number(game.settings.get(ID_CONVERSOR, 'nivelGrupo')) || '';
     this.estado = {
-      nome: '', conceito: '', img: '', token: '', texto5e: '', textoAberto: false, calibrarAberto: false, itensExtras: [], cr: '5', papel: 'solo', nivelGrupo: nivelPadrao,
+      nome: '', conceito: '', img: '', token: '', texto5e: '', textoAberto: false, calibrarAberto: Number(nivelPadrao) > 0, itensExtras: [], cr: '5', papel: 'solo', nivelGrupo: nivelPadrao,
       ritmo: game.settings.get(ID_CONVERSOR, 'ritmo'),
       nd: null, ndManual: false, chefeFinal: false, conjurador: false, conjuracao: 'int',
       tamanho: 'med', tipo: 'mon', deslocamento: 9,
@@ -115,7 +116,14 @@ export class DialogoConversor extends HandlebarsApplicationMixin(ApplicationV2) 
     const tabelas = await api.obterTabelas();
 
     const validacao = criaturaDeFormulario(e);
-    if (!validacao.ok) return { erros: validacao.erros.map((c) => this.#erroLegivel(c)) };
+    if (!validacao.ok) {
+      const erros = validacao.erros.map((c) => this.#erroLegivel(c));
+      const base = validacao.parametrosND;
+      if (!base) return { erros };
+      const calculo = calcularND({ tabelas, papel: base.papel, cr: base.cr, nivelGrupo: base.nivelGrupo ?? undefined, ritmo: base.ritmo });
+      if (!e.ndManual || !e.nd) e.nd = calculo.nd;
+      return { erros, calculo, ndReferencia: ndDeReferencia(base.cr) };
+    }
 
     const calculo = calcularND({
       tabelas, papel: validacao.criatura.papel, cr: validacao.criatura.cr,
@@ -155,7 +163,7 @@ export class DialogoConversor extends HandlebarsApplicationMixin(ApplicationV2) 
   async _prepareContext() {
     const e = this.estado;
     const ctx = {
-      e, calibrarVisivel: e.calibrarAberto || String(e.nivelGrupo ?? '') !== '', // com nível preenchido o bloco nunca fica escondido
+      e, calibrarVisivel: e.calibrarAberto,
       papeis: PAPEIS.map(([v, r]) => ({ valor: v, rotulo: r, selecionado: v === e.papel })),
       ritmos: Object.keys(RITMOS).map((v) => ({ valor: v, rotulo: NOMES_RITMO[v], selecionado: v === e.ritmo })),
       tamanhos: CODIGOS_TAMANHO.map((v) => ({ valor: v, rotulo: NOMES_TAMANHO[v], selecionado: v === e.tamanho })),
@@ -201,7 +209,14 @@ export class DialogoConversor extends HandlebarsApplicationMixin(ApplicationV2) 
       ctx.erros = [erro.message?.startsWith('T20C5E.') ? t(erro.message) : erro.message];
       return ctx;
     }
-    if (p.erros) { ctx.erros = this.tocado ? p.erros : []; return ctx; }
+    if (p.erros) {
+      ctx.erros = this.tocado ? p.erros : [];
+      if (p.calculo) { // faltam outros dados (o nome, por exemplo), mas o ND já vale
+        ctx.nds = NDS.map((v) => ({ valor: v, selecionado: v === e.nd }));
+        Object.assign(ctx, { referencia: p.ndReferencia, calibrado: p.calculo.nd, usouFormula: p.calculo.usouFormula });
+      }
+      return ctx;
+    }
 
     ctx.nds = NDS.map((v) => ({ valor: v, selecionado: v === p.ndFinal }));
     ctx.limiteAtaques = p.limiteAtaques;

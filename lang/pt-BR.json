@@ -7,7 +7,7 @@
   "T20C5E.SecaoRitmo": "ND e dificuldade",
   "T20C5E.NotaRitmo": "Por padrão o ND é igual ao CR. Para calibrar o ND pelo custo do monstro para o seu grupo, abra a calibragem.",
   "T20C5E.Calibrar": "Calibrar pelo nível do grupo (opcional)",
-  "T20C5E.CalibrarDica": "Nível do grupo: o ND é escolhido para o monstro custar ao grupo o mesmo que custava em 5e. Ritmo: combates por descanso (T20: 1 a 2; 5e: 6 a 8); ele muda o ND mesmo com o nível vazio.",
+  "T20C5E.CalibrarDica": "A calibragem é automática: o ND acima muda assim que você preenche o nível. Nível do grupo: o ND é escolhido para o monstro custar ao grupo o mesmo que custava em 5e. Ritmo: combates por descanso (T20: 1 a 2; 5e: 6 a 8); ele muda o ND mesmo com o nível vazio.",
   "T20C5E.SecaoAtaques": "Ataques",
   "T20C5E.SecaoPrevia": "Prévia (a ficha como ficará)",
   "T20C5E.Nome": "Nome",
